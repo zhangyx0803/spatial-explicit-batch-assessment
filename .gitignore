@@ -30,3 +30,4 @@ data/*.gdb/
 # ---- 忽略：本机配置 ----------------------------------------
 config/datasource.json
 cache_schools.npz
+.venv/

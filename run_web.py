@@ -9,6 +9,20 @@
 from __future__ import annotations
 
 import argparse
+import sys as _sys
+
+# 版本守卫：放在最前面，避免老 Python 在导入 numpy 时抛出难懂的 SyntaxError
+if _sys.version_info < (3, 10):
+    _v = '.'.join(str(x) for x in _sys.version_info[:3])
+    print('=' * 62)
+    print('Python 版本过低：当前 %s，需要 3.10 及以上。' % _v)
+    print('')
+    print('解决办法（本项目已带好环境，直接运行即可）：')
+    print('  Windows:  双击运行  启动.bat')
+    print('  或手动:   .venv\\Scripts\\python.exe run_web.py --bundle data/demo_xuhui.bundle')
+    print('=' * 62)
+    _sys.exit(1)
+
 import os
 import sys
 
