@@ -13,7 +13,7 @@
 
 ```bash
 # 克隆
-git clone https://github.com/zhyx0803/spatial-explicit-batch-assessment.git
+git clone https://github.com/zhangyx0803/spatial-explicit-batch-assessment.git
 cd spatial-explicit-batch-assessment
 ```
 
