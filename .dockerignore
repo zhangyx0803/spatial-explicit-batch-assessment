@@ -1,0 +1,15 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+.pytest_cache
+out/
+out_web/
+out_real/
+out_city/
+out_jingan/
+out_demo/
+uploads/
+vendor/
+cache_schools.npz
+*.md.bak
