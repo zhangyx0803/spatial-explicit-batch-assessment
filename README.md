@@ -1,5 +1,7 @@
 # 空间显式批量评估工作台 V1.0
 
+**SEBA** — Spatial Explicit Batch Assessment｜空间显式批量评估
+
 一个把**真实地理数据**（路网、地铁、POI、土地利用、行政边界）变成**住宅批量估值**的可视化工具。
 纯 Python 标准库 + numpy/pandas，无需 GDAL、无需数据库，一条命令起服务。
 
@@ -9,10 +11,17 @@
 
 部署后访问域名即可，无需安装任何东西。
 
-本地跑：
+```bash
+# 克隆
+git clone https://github.com/zhyx0803/spatial-explicit-batch-assessment.git
+cd spatial-explicit-batch-assessment
+```
+
+本地跑（只需要 5 个 Python 包，不要 GDAL、不要数据库）：
 
 ```bash
 pip install -r requirements.txt
+python check_env.py                                  # 环境自检
 python run_web.py --no-open --bundle data/demo_xuhui.bundle
 # 打开 http://127.0.0.1:8765
 ```
@@ -98,17 +107,27 @@ python run_web.py --export-bundle data/demo_xuhui.bundle --real 徐汇区
 ## 目录结构
 
 ```
-seba/
-├── net.py            CSR 图 + Dijkstra（scipy 可选加速）
-├── operators.py      11 个空间算子（最短路/等时圈/2SFCA/核密度…）
-├── engine.py         因子 DAG 引擎（拓扑排序 + 缓存）
-├── centralplace.py   中心地识别与分级加权可达性
-├── vec.py            统一矢量读取（shp/geojson/kml/gdb）
-├── intake.py         字段语义自动识别
-├── realdata.py       真实数据装配
-├── stats.py / ratios.py / diagnosis.py
-├── report.py         Excel + DOCX 输出
-└── webapp/           标准库 http.server + 原生 JS
+spatial-explicit-batch-assessment/
+├── run_web.py        启动入口（支持 --bundle / --real / --export-bundle）
+├── check_env.py      部署前环境自检
+├── data/
+│   └── demo_xuhui.bundle   预打包数据集（880 KB，含因子结果与底图）
+├── config/
+│   ├── factors.yaml        演示场景因子配置
+│   ├── factors_real.yaml   真实数据因子配置
+│   └── datasource.example.json  换城市的模板
+└── seba/
+    ├── net.py            CSR 图 + Dijkstra（scipy 可选加速）
+    ├── operators.py      11 个空间算子（最短路/等时圈/2SFCA/核密度…）
+    ├── engine.py         因子 DAG 引擎（拓扑排序 + 缓存）
+    ├── centralplace.py   中心地识别与分级加权可达性
+    ├── vec.py            统一矢量读取（shp/geojson/kml/gdb）
+    ├── intake.py         字段语义自动识别
+    ├── realdata.py       真实数据装配
+    ├── bundle.py         数据集打包与加载
+    ├── stats.py / ratios.py / diagnosis.py
+    ├── report.py         Excel + DOCX 输出
+    └── webapp/           标准库 http.server + 原生 JS
 ```
 
 ---
