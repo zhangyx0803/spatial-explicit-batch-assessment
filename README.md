@@ -1,3 +1,15 @@
+---
+title: 空间显式批量评估工作台
+emoji: 🏙️
+colorFrom: indigo
+colorTo: orange
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: 用真实路网与 POI 做住宅批量估值，可视化可追溯
+---
+
 # 空间显式批量评估工作台 V1.0
 
 **SEBA** — Spatial Explicit Batch Assessment｜空间显式批量评估
@@ -10,6 +22,9 @@
 ## 在线体验
 
 部署后访问域名即可，无需安装任何东西。
+
+> 当前部署在 Hugging Face Spaces：`https://zhangyx0803-<space名>.hf.space`
+> 免费实例 48 小时无访问会休眠，首次打开约需 30 秒唤醒。
 
 ```bash
 # 克隆
