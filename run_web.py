@@ -27,6 +27,9 @@ import os
 import sys
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
+# 打包成 exe 后，资源被解到 sys._MEIPASS，优先用它
+if getattr(sys, "frozen", False) and getattr(sys, "_MEIPASS", None):
+    _BASE = sys._MEIPASS
 _VENDOR = os.path.join(_BASE, 'vendor')
 if os.path.isdir(_VENDOR):
     sys.path.insert(0, _VENDOR)   # 项目内可选的 scipy/pyogrio；放最前保证 numpy 版本配套
@@ -55,7 +58,7 @@ def main(argv=None) -> int:
     if os.environ.get("HOST"):
         args.host = os.environ["HOST"]
 
-    base = os.path.dirname(os.path.abspath(__file__))
+    base = _BASE
     cfg = args.config if os.path.isabs(args.config) else os.path.join(base, args.config)
     out = args.out if os.path.isabs(args.out) else os.path.join(base, args.out)
     if not os.path.exists(cfg):

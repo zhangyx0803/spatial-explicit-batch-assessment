@@ -31,3 +31,6 @@ data/*.gdb/
 config/datasource.json
 cache_schools.npz
 .venv/
+dist/
+build/
+*.spec
