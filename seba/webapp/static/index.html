@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>空间显式批量评估工作台 V1.0</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="appbar">
+  <div class="mark">SEBA</div>
+  <div class="title"><b>空间显式批量评估工作台</b><span class="v">V1.0</span></div>
+  <div class="proj" id="projName">…</div>
+  <div class="grow"></div>
+  <div class="elapsed" id="timer"></div>
+  <button class="btn ghost" id="btnTour" title="新手引导">?</button>
+  <button class="btn" id="btnIntake">接入数据</button>
+  <button class="btn" id="btnData">导入表格</button>
+  <button class="btn" id="btnReload">重算</button>
+  <button class="btn primary" id="btnExport">导出成果</button>
+</header>
+
+<main>
+  <!-- ── 左栏 ── -->
+  <aside class="col left">
+    <section class="card">
+      <h2>运行状态</h2>
+      <div class="status" id="statusList"></div>
+    </section>
+
+    <section class="card">
+      <h2>工程概况</h2>
+      <dl class="kv" id="metaList"></dl>
+    </section>
+
+    <section class="card">
+      <h2>显示图层</h2>
+      <div class="pad">
+        <select id="fieldSel" class="select"></select>
+        <p class="hint" id="fieldHint">在地图上点选单元可查看明细</p>
+
+        <div class="seg" id="geomSeg" role="tablist" aria-label="显示方式">
+          <button class="segbtn active" data-geom="poly">村居面</button>
+          <button class="segbtn" data-geom="hex">六边形网格</button>
+          <button class="segbtn" data-geom="dot">质心点</button>
+        </div>
+        <p class="hint" id="geomHint">按真实村/居委边界填色，能逐块核对。</p>
+      </div>
+    </section>
+
+    <section class="card grow">
+      <h2>数据图层</h2>
+      <div id="layerList" class="layers"></div>
+    </section>
+  </aside>
+
+  <!-- ── 地图 ── -->
+  <section class="stage">
+    <div class="stage-head">
+      <div class="h">
+        <span class="name" id="stageTitle">估值单价</span>
+        <span class="unit" id="stageUnit"></span>
+      </div>
+      <div class="stat" id="stageStat"></div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="map"></canvas>
+      <div class="tip" id="tip" hidden></div>
+      <div class="loading" id="mapLoading" hidden><span class="spin"></span>正在计算</div>
+    </div>
+
+    <div class="stage-foot">
+      <div class="legendbar" id="legendBar"></div>
+      <span class="lg-scale" id="legendScale"></span>
+      <span class="grow"></span>
+      <span class="foot-legend" id="footLegend" hidden>
+        <i class="sq over"></i>高估 <i class="sq under"></i>低估 <i class="sq none"></i>无成交
+      </span>
+      <span class="foot-legend" id="mapLegend">
+        <i class="cdot l1"></i>市级中心地
+        <i class="cdot l2"></i>区级
+        <i class="cdot l3"></i>社区级
+        <i class="cline road"></i>路网
+        <i class="cbox water"></i>水体
+      </span>
+      <span class="foot-info" id="footInfo"></span>
+    </div>
+  </section>
+
+  <!-- ── 右栏 ── -->
+  <aside class="col right">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="model">估值模型</button>
+      <button class="tab" data-tab="diag">空间诊断</button>
+      <button class="tab" data-tab="unit">单元详情</button>
+      <button class="tab" data-tab="factor">因子设置</button>
+    </div>
+
+    <div class="tabbody" id="tab-model">
+      <h3>精度指标</h3>
+      <div class="metrics" id="metrics"></div>
+
+      <div class="sechead">
+        <h3>参与建模的因子 <span class="muted" id="featCount"></span></h3>
+        <div class="mini">
+          <button class="linkbtn" id="btnAll">全选</button>
+          <button class="linkbtn" id="btnValid">去对照</button>
+        </div>
+      </div>
+      <div class="featlist" id="featList"></div>
+
+      <h3>系数表 <span class="muted">对数尺度，正向为提价</span></h3>
+      <div class="tablewrap">
+        <table class="tbl" id="coefTbl">
+          <thead><tr><th>变量</th><th class="r">系数</th><th class="r">t 值</th><th class="r">p 值</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>共线性 <span class="muted">方差膨胀因子，越大越可疑</span></h3>
+      <div class="tablewrap">
+        <table class="tbl" id="vifTbl">
+          <thead><tr><th>变量</th><th class="r">VIF</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tabbody" id="tab-diag" hidden>
+      <h3>残差空间自相关</h3>
+      <div class="moran" id="moranCard"></div>
+
+      <h3>系统性高估 / 低估板块</h3>
+      <div class="tablewrap">
+        <table class="tbl" id="distTbl">
+          <thead><tr><th>行政区</th><th class="r">残差均值</th><th class="r">样本</th><th>判定</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>比率研究 <span class="muted">国际评估行业标准口径</span></h3>
+      <div class="metrics" id="ratioCard"></div>
+      <p class="note">比率＝估值÷成交价，按空间分块留出预测计算，属样本外口径。COD 越小表示估值越集中一致。</p>
+    </div>
+
+    <div class="tabbody" id="tab-unit" hidden>
+      <div class="empty" id="unitEmpty">在地图上点选一个单元</div>
+      <div id="unitBody" hidden>
+        <div class="uhead">
+          <span class="uid" id="uId">—</span>
+          <span class="utag" id="uAdmin"></span>
+        </div>
+        <div class="metrics" id="uMetrics"></div>
+
+        <h3>该单元的因子取值</h3>
+        <div class="tablewrap tall">
+          <table class="tbl" id="uFactorTbl">
+            <thead><tr><th>因子</th><th class="r">取值</th><th class="r">参与建模</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbody" id="tab-factor" hidden>
+      <p class="note" style="margin:0 0 8px">
+        每张卡片是一个因子。改完参数点右上「保存并重算」，模型与地图会立刻更新。
+        中文名可直接修改，用于报告与图例。
+      </p>
+      <div class="fcardwrap" id="factorCards"></div>
+
+      <div class="sechead">
+        <h3>新增因子</h3>
+        <div class="mini"><button class="linkbtn" id="btnAddToggle">展开</button></div>
+      </div>
+      <div id="addBox" hidden>
+        <div class="form">
+          <label>因子类型</label>
+          <select id="tplSel" class="select"></select>
+          <label>因子名称</label>
+          <input id="tplName" class="input" placeholder="如：到最近医院的车行时间">
+          <div id="tplInputs"></div>
+          <div id="tplParams"></div>
+          <div class="formfoot">
+            <button class="btn small" id="btnAddFactor">添加并重算</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ── 导入数据 ── -->
+<div class="modal" id="importModal" hidden>
+  <div class="dialog">
+    <div class="dlg-head">
+      <b>导入我的数据</b>
+      <span class="muted">支持 CSV / 文本；经纬度会自动换算为平面坐标</span>
+      <button class="x" id="impClose">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="form3">
+        <div><label>工程名称</label><input id="impName" class="input" value="我的工程"></div>
+        <div><label>单元尺寸（米）</label><input id="impCell" class="input" type="number" value="250" min="10" step="10"></div>
+        <div><label>套均面积（㎡，总价换单价用）</label><input id="impAvg" class="input" type="number" value="90" min="1"></div>
+      </div>
+
+      <div id="slotList"></div>
+
+      <div class="notes" id="impNotes"></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn small" id="impReset">恢复演示数据</button>
+      <span class="grow"></span>
+      <button class="btn small" id="impCancel">取消</button>
+      <button class="btn small primary" id="impApply">导入并计算</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 数据接入向导 ── -->
+<div class="modal" id="intakeModal" hidden>
+  <div class="dialog wide">
+    <div class="dlg-head">
+      <b>数据接入向导</b>
+      <span class="muted">上传你的数据，系统自动识别文件类型和字段含义，无需改任何配置</span>
+      <button class="x" id="itkClose">×</button>
+    </div>
+    <div class="dlg-body">
+
+      <div class="step">
+        <span class="stepno">1</span>
+        <div class="stepbody">
+          <div class="steptitle">上传数据文件</div>
+          <div class="drop" id="itkDrop">
+            <div class="droptext">
+              把文件拖到这里，或
+              <label class="linkish">选择文件<input type="file" id="itkFile" multiple hidden
+                accept=".shp,.dbf,.prj,.shx,.cpg,.csv,.txt,.geojson,.json"></label>
+            </div>
+            <div class="drophint">
+              评估单元边界（面）、路网（线）、土地利用（面）、POI（点）、成交表（CSV）<br>
+              注意：Shapefile 要同时上传 .shp 与 .dbf（.prj 建议一起，用于坐标识别）
+            </div>
+          </div>
+          <div class="filelist" id="itkFiles"></div>
+        </div>
+      </div>
+
+      <div class="step" id="itkStep2" hidden>
+        <span class="stepno">2</span>
+        <div class="stepbody">
+          <div class="steptitle">
+            自动识别结果
+            <span class="muted small">置信度低的请手动确认，下拉框可改</span>
+          </div>
+          <div id="itkResult"></div>
+        </div>
+      </div>
+
+      <div class="step" id="itkStep3" hidden>
+        <span class="stepno">3</span>
+        <div class="stepbody">
+          <div class="steptitle">工程设置</div>
+          <div class="form3">
+            <div><label>工程名称</label><input id="itkName" class="input" value="我的评估工程"></div>
+            <div><label>城市中心经度（用于 CBD 可达性）</label>
+              <input id="itkLon" class="input" type="number" step="0.0001" placeholder="可留空"></div>
+            <div><label>城市中心纬度</label>
+              <input id="itkLat" class="input" type="number" step="0.0001" placeholder="可留空"></div>
+          </div>
+          <div class="notes" id="itkNotes"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="dlg-foot">
+      <span class="muted small" id="itkStatus"></span>
+      <span class="grow"></span>
+      <button class="btn small" id="itkSample">用上海示例试一下</button>
+      <button class="btn small" id="itkCancel">取消</button>
+      <button class="btn small primary" id="itkApply" disabled>确认并保存配置</button>
+    </div>
+  </div>
+</div>
+
+<div id="tourLayer" hidden>
+  <div class="tour-mask"></div>
+  <div class="tour-ring" id="tourRing"></div>
+  <div class="tour-tip" id="tourTip">
+    <div class="tour-step" id="tourStep"></div>
+    <div class="tour-title" id="tourTitle"></div>
+    <div class="tour-text" id="tourText"></div>
+    <div class="tour-foot">
+      <button class="btn small ghost" id="tourSkip">跳过</button>
+      <span class="grow"></span>
+      <span class="tour-idx" id="tourIdx"></span>
+      <button class="btn small" id="tourPrev">上一步</button>
+      <button class="btn small primary" id="tourNext">下一步</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/static/app.js"></script>
+<script src="/static/intake.js"></script>
+<script src="/static/tour.js"></script>
+</body>
+</html>

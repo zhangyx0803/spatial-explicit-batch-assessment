@@ -1,0 +1,332 @@
+# =====================================================================
+# 空间显式批量评估工作台 —— 工程配置示例
+# 因子由这份声明驱动：引擎解析、拓扑排序、执行空间算子 DAG、结果缓存。
+# 新增因子只需在这里加一段，不改引擎代码。
+# =====================================================================
+
+project:
+  name: 演示区空间显式批量评估
+  crs: CGCS2000_3_degree_zone
+  area_of_interest:
+    name: 演示研究区
+    nx: 40
+    ny: 40
+    cell_m: 250
+    seed: 20261117
+
+# ---------------------------------------------------------------------
+# 表 4：图层注册表。因子配置里引用的就是这里的 layer_id，
+# version 参与缓存键，改了数据必须改版本号。
+# ---------------------------------------------------------------------
+layers:
+  road_net:     {type: network, asof_date: 2025-06-30, version: v1.0}
+  poi_cbd:      {type: point,   asof_date: 2025-06-30, version: v1.0}
+  poi_com:      {type: point,   asof_date: 2025-06-30, version: v1.0}
+  poi_metro:    {type: point,   asof_date: 2025-06-30, version: v1.0}
+  poi_school:   {type: point,   asof_date: 2025-06-30, version: v1.0}
+  poi_hospital: {type: point,   asof_date: 2025-06-30, version: v1.0}
+  poi_bus:      {type: point,   asof_date: 2025-06-30, version: v1.0}
+  layer_park:   {type: polygon, asof_date: 2025-06-30, version: v1.0}
+  layer_water:  {type: polygon, asof_date: 2025-06-30, version: v1.0}
+  layer_noise:  {type: raster,  asof_date: 2025-06-30, version: v1.0}
+
+# ---------------------------------------------------------------------
+# 因子声明
+# ---------------------------------------------------------------------
+factors:
+  # ========== 区位：路网可达性 ==========
+  - code: net_cbd_dist
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_cbd
+    params:
+      mode: drive
+      snap:
+        method: nearest_node
+        max_dist_m: 300
+    outputs: [dist_m]
+    note: 到 CBD 的网络距离（中间因子，被重力可达性复用）
+
+  - code: acc_cbd_time
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_cbd
+    params:
+      mode: drive
+      snap:
+        method: nearest_node
+        max_dist_m: 300
+    outputs: [t_min]
+    note: 到 CBD 最短车行时间；与上一条同参，命中缓存
+
+  - code: acc_cbd_time_turn
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_cbd
+    params:
+      mode: drive
+      snap:
+        method: nearest_node
+        max_dist_m: 300
+      turn_penalty_min: 0.25
+    outputs: [t_min]
+    note: 计入转向惩罚的对照因子（边扩展图），不进入模型
+
+  - code: acc_cbd_gravity
+    op: gravity_access
+    inputs:
+      opportunity: poi_cbd
+      dist: factor:net_cbd_dist
+    params:
+      mass: 1.0
+      impedance:
+        type: exponential
+        beta: 0.0006
+    outputs: [index]
+    note: 到 CBD 的重力可达性，复用 net_cbd_dist 的结果
+
+  - code: acc_metro_dist
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_metro
+    params:
+      mode: walk
+      snap:
+        method: nearest_node
+        max_dist_m: 300
+    outputs: [dist_m]
+    note: 到最近地铁站的步行网络距离
+
+  - code: acc_metro_cnt_15
+    op: network_isochrone
+    inputs:
+      network: road_net
+      destinations: poi_metro
+    params:
+      mode: walk
+      thresholds_min: [15]
+      snap:
+        method: nearest_node
+        max_dist_m: 300
+    outputs: [n_reached]
+    note: 15 分钟步行圈内地铁站数
+
+  # ========== 公共服务：2SFCA ==========
+  - code: acc_school_2sfca
+    op: two_step_floating_catchment
+    inputs:
+      supply: poi_school
+      demand: field:population
+      network: road_net
+    params:
+      mode: walk
+      threshold_min: 15
+      decay:
+        type: gaussian
+        sigma_min: 8
+    outputs: [sfca_index]
+    note: 教育资源两步移动搜寻可达性
+
+  - code: acc_hospital_2sfca
+    op: two_step_floating_catchment
+    inputs:
+      supply: poi_hospital
+      demand: field:population
+      network: road_net
+    params:
+      mode: drive
+      threshold_min: 20
+      decay:
+        type: gaussian
+        sigma_min: 10
+    outputs: [sfca_index]
+    note: 医疗资源两步移动搜寻可达性
+
+  - code: acc_park_dist
+    op: spatial_join_agg
+    inputs:
+      layer: layer_park
+    params:
+      stat: nearest_distance
+    outputs: [value]
+    note: 到最近公园的距离
+
+  # ========== 商业 ==========
+  - code: acc_poi_com_1km
+    op: buffer_overlay
+    inputs:
+      layer: poi_com
+    params:
+      radius_m: 1000
+      stat: count
+    outputs: [value]
+    note: 1 km 内商业 POI 数量
+
+  - code: acc_retail_kde
+    op: kernel_density
+    inputs:
+      layer: poi_com
+    params:
+      bandwidth_m: 600
+    outputs: [value]
+    note: 商业核密度
+
+  # ========== 环境 ==========
+  - code: env_green_500m
+    op: buffer_overlay
+    inputs:
+      layer: layer_park
+    params:
+      radius_m: 500
+      stat: area_share
+    outputs: [value]
+    note: 500 m 缓冲绿地率
+
+  - code: env_water_dist
+    op: spatial_join_agg
+    inputs:
+      layer: layer_water
+    params:
+      stat: nearest_distance
+    outputs: [value]
+    note: 到最近水体距离
+
+  - code: env_noise_lnight
+    op: raster_extract
+    inputs:
+      raster: layer_noise
+    params:
+      stat: mean
+    outputs: [value]
+    note: 夜间噪声值（用户导入栅格）
+
+  # ========== 微观路网 ==========
+  - code: net_intersect_dens
+    op: network_topology
+    inputs:
+      network: road_net
+    params:
+      radius_m: 500
+      stat: intersection_density
+    outputs: [intersection_density]
+    note: 500 m 内交叉口密度（个/km²）
+
+  - code: net_deadend_ratio
+    op: network_topology
+    inputs:
+      network: road_net
+    params:
+      radius_m: 500
+      stat: deadend_ratio
+    outputs: [deadend_ratio]
+    note: 500 m 内尽端节点比例
+
+  - code: net_bus_cnt
+    op: buffer_overlay
+    inputs:
+      layer: poi_bus
+    params:
+      radius_m: 300
+      stat: count
+    outputs: [value]
+    note: 300 m 内公交站点数
+
+  # ========== 规划与建成（属性直读，不经空间算子） ==========
+  - code: unit_pop
+    op: attribute
+    inputs:
+      field: field:pop_density
+    outputs: [value]
+    note: 单元人口密度（邻里特征）
+
+  - code: plan_far
+    op: attribute
+    inputs:
+      field: field:far
+    outputs: [value]
+    note: 控规容积率
+
+  - code: built_density
+    op: attribute
+    inputs:
+      field: field:built_density
+    outputs: [value]
+    note: 建筑密度
+
+  - code: floor_ratio
+    op: attribute
+    inputs:
+      field: field:floor_ratio
+    outputs: [value]
+    note: 所在楼层 / 总层数
+
+  # ========== 盲合成的对照因子（与价格无因果关系） ==========
+  - code: b_placebo_1
+    op: attribute
+    inputs:
+      field: field:placebo_1
+    outputs: [value]
+    note: 安慰剂因子 1，用于检验模型能否识别无效变量
+
+  - code: b_placebo_2
+    op: attribute
+    inputs:
+      field: field:placebo_2
+    outputs: [value]
+    note: 安慰剂因子 2，用于检验模型能否识别无效变量
+
+# ---------------------------------------------------------------------
+# 模型
+# ---------------------------------------------------------------------
+model:
+  target: unit_price
+  log_transform: true
+  family: [ols, ridge]
+  ridge_lambda: 2.0
+  vif_threshold: 10
+  seed: 20261117
+  features:
+    - acc_cbd_time
+    - acc_cbd_gravity
+    - acc_metro_dist
+    - acc_metro_cnt_15
+    - acc_school_2sfca
+    - acc_hospital_2sfca
+    - acc_park_dist
+    - acc_poi_com_1km
+    - acc_retail_kde
+    - env_green_500m
+    - env_water_dist
+    - env_noise_lnight
+    - net_intersect_dens
+    - net_deadend_ratio
+    - net_bus_cnt
+    - unit_pop
+    - plan_far
+    - built_density
+    - floor_ratio
+    - b_placebo_1
+    - b_placebo_2
+  cv:
+    random_folds: 5
+    spatial_folds: 5
+
+# ---------------------------------------------------------------------
+# 批量估值与比率研究
+# ---------------------------------------------------------------------
+valuation:
+  interval_bootstrap: 300
+  levels: [10, 50, 90]
+  cod_max: 15
+  prd_range: [0.98, 1.03]
+
+# ---------------------------------------------------------------------
+# 空间诊断
+# ---------------------------------------------------------------------
+diagnosis:
+  permutations: 499
+  district_t_threshold: 1.5

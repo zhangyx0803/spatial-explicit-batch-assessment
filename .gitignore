@@ -1,0 +1,32 @@
+# ---- 忽略：第三方依赖、上传文件、运行产物 ----------------
+vendor/
+uploads/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+out/
+out_web/
+out_real/
+out_city/
+out_jingan/
+out_demo/
+
+# ---- 忽略：本地原始地理数据（体积大，不进仓库）----------------
+data/*.shp
+data/*.dbf
+data/*.prj
+data/*.shx
+data/*.cpg
+data/*.gdb/
+*.shp
+*.dbf
+*.prj
+*.shx
+
+# 数据包要保留（部署用）
+!data/*.bundle
+
+# ---- 忽略：本机配置 ----------------------------------------
+config/datasource.json
+cache_schools.npz

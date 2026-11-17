@@ -1,0 +1,200 @@
+# =====================================================================
+# 真实数据配置 v2：地铁可达性 + 商业密度 + CBD 可达性 + 环境品质
+# 数据源：上海村界 / 2024 真实路网 / 2026 土地利用 / OSM POI
+# =====================================================================
+
+project:
+  name: 上海区县真实数据评估
+  crs: 本地平面坐标（米）
+  area_of_interest:
+    district: 徐汇区
+    cell_m: 120
+    radius_m: 500
+    obs_share: 0.70
+    seed: 20261117
+
+layers:
+  road_net:  {type: network, asof_date: 2024, version: sh2024}
+  poi_cbd:   {type: point,   asof_date: 2024, version: sh2024}
+  poi_metro: {type: point,   asof_date: 2024, version: sh2024}
+  poi_shop:  {type: point,   asof_date: 2024, version: sh2024}
+  poi_bus:   {type: point,   asof_date: 2024, version: sh2024}
+
+factors:
+  # ---------------- 轨道与公交 ----------------
+  - code: rt_metro_time
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_metro
+    params:
+      mode: walk
+      snap:
+        method: nearest_node
+        max_dist_m: 500
+    outputs: [t_min]
+    note: 到最近地铁站步行时间
+
+  - code: rt_metro_dist
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_metro
+    params:
+      mode: walk
+      snap:
+        method: nearest_node
+        max_dist_m: 500
+    outputs: [dist_m]
+    note: 到最近地铁站步行距离
+
+  - code: rt_bus_cnt
+    op: buffer_overlay
+    inputs:
+      layer: poi_bus
+    params:
+      radius_m: 300
+      stat: count
+    outputs: [value]
+    note: 300 米内公交站数
+
+  # ---------------- CBD ----------------
+  - code: rt_cbd_time
+    op: network_shortest_path
+    inputs:
+      network: road_net
+      destinations: poi_cbd
+    params:
+      mode: drive
+      snap:
+        method: nearest_node
+        max_dist_m: 500
+    outputs: [t_min]
+    note: 到人民广场车行时间
+
+  # ---------------- 商业 ----------------
+  - code: rt_shop_1km
+    op: buffer_overlay
+    inputs:
+      layer: poi_shop
+    params:
+      radius_m: 1000
+      stat: count
+    outputs: [value]
+    note: 1 公里内商业设施数
+
+  - code: rt_comm_share
+    op: attribute
+    inputs:
+      field: field:comm_share
+    outputs: [value]
+    note: 500 米商业与工业用地占比
+
+  # ---------------- 中心地理论：分级加权可达性 ----------------
+  - code: cp_gravity
+    op: attribute
+    inputs:
+      field: field:cp_gravity
+    outputs: [value]
+    note: 中心地加权可达性（市级1.0/区级0.5/社区0.25）
+
+  - code: cp_L1_time
+    op: attribute
+    inputs:
+      field: field:cp_L1_time
+    outputs: [value]
+    note: 到最近市级中心地时间
+
+  - code: cp_high_level
+    op: attribute
+    inputs:
+      field: field:cp_high_level
+    outputs: [value]
+    note: 30 分钟内可达的最高中心地等级
+
+  # ---------------- 学区（官方招生规模 + 真实学校点位） ----------------
+  - code: sch_dist
+    op: attribute
+    inputs:
+      field: field:sch_dist
+    outputs: [value]
+    note: 到最近学校距离
+
+  - code: sch_class_cnt
+    op: attribute
+    inputs:
+      field: field:sch_class_cnt
+    outputs: [value]
+    note: 最近小学招生班级数（规模）
+
+  - code: sch_group
+    op: attribute
+    inputs:
+      field: field:sch_group
+    outputs: [value]
+    note: 最近小学是否集团化办学
+
+  # ---------------- 环境与路网品质 ----------------
+  - code: rt_green_500
+    op: attribute
+    inputs:
+      field: field:green_share
+    outputs: [value]
+    note: 500 米绿地覆盖率
+
+  - code: rt_built_share
+    op: attribute
+    inputs:
+      field: field:built_share
+    outputs: [value]
+    note: 500 米建设用地占比
+
+  - code: rt_road_density
+    op: attribute
+    inputs:
+      field: field:road_km_km2
+    outputs: [value]
+    note: 路网密度（km/km²）
+
+  - code: rt_isect_dens
+    op: network_topology
+    inputs:
+      network: road_net
+    params:
+      radius_m: 500
+      stat: intersection_density
+    outputs: [intersection_density]
+    note: 500 米交叉口密度
+
+model:
+  target: unit_price
+  log_transform: true
+  family: [ols, ridge]
+  ridge_lambda: 2.0
+  vif_threshold: 10
+  seed: 20261117
+  features:
+    - rt_metro_time
+    - cp_gravity
+    - sch_dist
+    - sch_class_cnt
+    - sch_group
+    - rt_shop_1km
+    - rt_comm_share
+    - rt_green_500
+    - rt_built_share
+    - rt_road_density
+    - rt_isect_dens
+  cv:
+    random_folds: 5
+    spatial_folds: 5
+
+valuation:
+  interval_bootstrap: 300
+  levels: [10, 50, 90]
+  cod_max: 15
+  prd_range: [0.98, 1.03]
+
+diagnosis:
+  permutations: 499
+  district_t_threshold: 1.5
