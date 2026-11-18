@@ -49,6 +49,8 @@ def main(argv=None) -> int:
                     help="直接加载预打包的数据集（无需原始地理数据）")
     ap.add_argument("--export-bundle", default=None, metavar="文件",
                     help="把当前真实数据装配结果打包保存，供服务器使用")
+    ap.add_argument("--districts", default=None, metavar="目录",
+                    help="内置多区数据目录：启动后先让用户选区")
     ap.add_argument("--real", default=None, metavar="区县",
                     help="使用真实数据（上海村界+真实路网），如：徐汇区")
     args = ap.parse_args(argv)
@@ -83,6 +85,29 @@ def main(argv=None) -> int:
         save_bundle(ds, args.export_bundle, rep.notes, {"district": district or "全市"})
         print("      已保存 %s（%.1f MB，%d 单元）"
               % (args.export_bundle, os.path.getsize(args.export_bundle) / 1048576, ds.n_units))
+        return 0
+
+    if args.districts:
+        from seba.webapp.server import make_server
+
+        ddir = args.districts if os.path.isabs(args.districts) else os.path.join(base, args.districts)
+        cfg = os.path.join(base, "config", "factors_real.yaml")
+        names = [f[:-7] for f in os.listdir(ddir) if f.endswith(".bundle")] if os.path.isdir(ddir) else []
+        print("[1/2] 内置 %d 个区，启动后由用户选择" % len(names))
+        h, state = make_server(cfg, args.host, args.port, out, dataset=None,
+                               notes=None, source="multi", prebuilt=True, districts_dir=ddir)
+        import webbrowser
+
+        url = "http://%s:%d/" % (args.host, args.port)
+        print("[2/2] 服务已启动：%s" % url)
+        if not args.no_open:
+            webbrowser.open(url)
+        try:
+            h.serve_forever()
+        except KeyboardInterrupt:
+            print("\n已停止。")
+        finally:
+            h.server_close()
         return 0
 
     if args.bundle:

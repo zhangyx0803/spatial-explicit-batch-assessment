@@ -177,7 +177,7 @@ def main() -> int:
             _pause()
             return 0
 
-    if not os.path.exists(bundle):
+    if not os.path.exists(bundle) and not os.path.isdir(os.path.join(base, "data", "districts")):
         log("  [错误] 找不到数据包：")
         log("         %s" % bundle)
         log("")
@@ -216,7 +216,12 @@ def main() -> int:
 
     threading.Thread(target=_open_later, daemon=True).start()
 
-    sys.argv = [sys.argv[0], "--bundle", bundle, "--port", str(port)]
+    ddir = os.path.join(base, "data", "districts")
+    if os.path.isdir(ddir) and any(f.endswith(".bundle") for f in os.listdir(ddir)):
+        log("           内置多区模式：%d 个区" % len([f for f in os.listdir(ddir) if f.endswith(".bundle")]))
+        sys.argv = [sys.argv[0], "--districts", ddir, "--port", str(port)]
+    else:
+        sys.argv = [sys.argv[0], "--bundle", bundle, "--port", str(port)]
     from run_web import main as web_main
 
     try:

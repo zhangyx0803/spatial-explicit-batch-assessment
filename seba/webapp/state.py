@@ -54,7 +54,7 @@ class _MoranView:
 
 class AppState:
     def __init__(self, cfg_path: str, dataset=None, notes=None, source: str = "demo",
-                 prebuilt: bool = False):
+                 prebuilt: bool = False, districts_dir: str = None):
         self.cfg_path = cfg_path
         with open(cfg_path, "r", encoding="utf-8") as fh:
             self.cfg = ProjectConfig.from_yaml(fh.read())
@@ -64,8 +64,17 @@ class AppState:
         self.prebuilt = bool(prebuilt)
         self.import_notes: List[str] = list(notes or [])
         self.run_id = "RUN-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.districts_dir = districts_dir
+        self.districts: List[Dict] = []
+        self.current = None
 
         t0 = time.perf_counter()
+        if districts_dir:
+            # 多区模式：先扫描可用区，不加载任何数据，等用户选
+            self.districts = self._scan_districts(districts_dir)
+            self.ds = None
+            self.load_seconds = 0.0
+            return
         if dataset is not None:
             self._activate(dataset)
             self.load_seconds = time.perf_counter() - t0
@@ -79,6 +88,43 @@ class AppState:
         )
         self._activate(scene.dataset)
         self.load_seconds = time.perf_counter() - t0
+
+    # ------------------------------------------------------------------
+    # 多区：扫描、切换
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _scan_districts(d: str) -> List[Dict]:
+        import json
+
+        idx = os.path.join(d, "_index.json")
+        if os.path.exists(idx):
+            try:
+                with open(idx, "r", encoding="utf-8") as fh:
+                    return json.load(fh)
+            except Exception:
+                pass
+        out = []
+        for fn in sorted(os.listdir(d)):
+            if fn.endswith(".bundle"):
+                out.append({"name": fn[:-7], "units": 0, "obs": 0,
+                            "r2": None, "mb": round(os.path.getsize(os.path.join(d, fn)) / 1048576, 2)})
+        return out
+
+    def switch_district(self, name: str) -> Dict:
+        from ..bundle import load_bundle
+
+        path = os.path.join(self.districts_dir or "", "%s.bundle" % name)
+        if not os.path.exists(path):
+            raise ValueError("找不到区数据：%s" % name)
+        ds, notes, extra = load_bundle(path)
+        self.prebuilt = True
+        self.import_notes = list(notes or [])
+        self.current = name
+        self.run_id = "RUN-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+        t0 = time.perf_counter()
+        self._activate(ds)
+        self.load_seconds = time.perf_counter() - t0
+        return self.bootstrap()
 
     # ------------------------------------------------------------------
     # 激活一个数据集：跑因子、定特征池、拟合
@@ -256,6 +302,9 @@ class AppState:
         return out
 
     def bootstrap(self) -> Dict:
+        if getattr(self, "ds", None) is None:
+            return {"need_select": True, "districts": self.districts,
+                    "cfg_path": os.path.basename(self.cfg_path)}
         net = self.ds.layers["road_net"]
         meta = net.aux_meta or {}
         u = self.ds.units

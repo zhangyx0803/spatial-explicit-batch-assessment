@@ -99,25 +99,41 @@ function extentOf() {
   return { x0: e[0], y0: e[1], x1: e[2] + cell, y1: e[3] + cell, cell };
 }
 
+const VIEW = { k: 1, dx: 0, dy: 0 };
+const TF = { s: 1, cx: 0, cy: 0, x0: 0, y1: 0 };
+
+function X(x) { return TF.cx + (x - TF.x0) * TF.s; }
+function Y(y) { return TF.cy - (y - TF.y1) * TF.s; }
+
+function viewReset() { VIEW.k = 1; VIEW.dx = 0; VIEW.dy = 0; }
+
 function layoutMap() {
   const cvs = $('map'), wrap = $('canvasWrap');
   const g = extentOf();
   const wData = Math.max(1, g.x1 - g.x0), hData = Math.max(1, g.y1 - g.y0);
   const availW = Math.max(160, wrap.clientWidth - 20);
   const availH = Math.max(160, wrap.clientHeight - 20);
-  const s = Math.min(availW / wData, availH / hData);      // 每米多少像素
-  const w = Math.max(80, wData * s), h = Math.max(80, hData * s);
   const dpr = window.devicePixelRatio || 1;
 
-  cvs.style.width = w + 'px';
-  cvs.style.height = h + 'px';
-  cvs.width = Math.round(w * dpr);
-  cvs.height = Math.round(h * dpr);
+  // 画布固定为可用区域大小，缩放靠变换矩阵，不再改变画布尺寸
+  cvs.style.width = availW + 'px';
+  cvs.style.height = availH + 'px';
+  cvs.width = Math.round(availW * dpr);
+  cvs.height = Math.round(availH * dpr);
+
+  const fit = Math.min(availW / wData, availH / hData);   // 适配比例
+  const s = fit * VIEW.k;
+  // 以「数据中心」为锚点，平移到画布中心，再叠加平移量
+  TF.s = s;
+  TF.x0 = (g.x0 + g.x1) / 2;
+  TF.y1 = (g.y0 + g.y1) / 2;
+  TF.cx = availW / 2 + VIEW.dx;
+  TF.cy = availH / 2 + VIEW.dy;
 
   const ctx = cvs.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  Object.assign(MAP, { s, cell: g.cell, x0: g.x0, y0: g.y0, ctx });
-  return { ctx, w, h, s, g };
+  Object.assign(MAP, { s, cell: g.cell, x0: g.x0, y0: g.y0, ctx, w: availW, h: availH });
+  return { ctx, w: availW, h: availH, s, g };
 }
 
 function fieldPayload() {
@@ -188,6 +204,15 @@ function hexAggregate(units, vals, sumW, g) {
 }
 
 function drawMap() {
+  try { return drawMap0(); }
+  catch (e) {
+    console.error('drawMap', e);
+    const t = document.getElementById('stageTitle');
+    if (t) t.textContent = '绘图出错：' + e.message + ' || ' + String(e.stack||'').split('\n').slice(0,4).join(' >> ');
+  }
+}
+
+function drawMap0() {
   const { ctx, w, h, s, g } = layoutMap();
   const p = fieldPayload();
   const vals = p.v || [];
@@ -212,8 +237,11 @@ function drawMap() {
   const size = Math.max(1, g.cell * s);
   MAP.idx = new Map();
   const bm = (S.boot && S.boot.basemap) || {};
-  const X = (x) => (x - g.x0) * s;
-  const Y = (y) => (g.y1 - y) * s;
+  if (MAP.bbox === undefined) buildBBox();
+
+  // 按行政区边界裁剪：只画本区的东西，不让邻区干扰
+  const clipPath = districtClipPath(bm, units);
+  if (clipPath) { ctx.save(); ctx.clip(clipPath); }
 
   // 水体：先铺底，江河水系是最有效的「这是哪儿」视觉锚点
   if (bm.water && bm.water.length) {
@@ -260,8 +288,8 @@ function drawMap() {
   }
 
   for (let k = 0; k < units.x.length; k++) {
-    const px = (units.x[k] - g.x0) * s;
-    const py = (g.y1 - units.y[k]) * s;
+    const px = X(units.x[k]);
+    const py = Y(units.y[k]);
     MAP.idx.set(Math.floor((units.x[k] - g.x0) / g.cell) + ',' + Math.floor((units.y[k] - g.y0) / g.cell), k);
 
     const v = vals[k];
@@ -288,13 +316,15 @@ function drawMap() {
 
   drawBasemap(ctx, s, g);
 
+  if (clipPath) { ctx.restore(); }
+
   ctx.strokeStyle = '#aeb6bf';
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
 
   if (S.unitIdx != null) {
-    const ux = (units.x[S.unitIdx] - g.x0) * s;
-    const uy = (g.y1 - units.y[S.unitIdx]) * s;
+    const ux = X(units.x[S.unitIdx]);
+    const uy = Y(units.y[S.unitIdx]);
     ctx.strokeStyle = '#11161c';
     ctx.lineWidth = 2;
     ctx.strokeRect(ux - 1, uy - 1, Math.ceil(size) + 2, Math.ceil(size) + 2);
@@ -320,8 +350,6 @@ function drawMap() {
 function drawBasemap(ctx, s, g) {
   const bm = S.boot && S.boot.basemap;
   if (!bm) return;
-  const X = (x) => (x - g.x0) * s;
-  const Y = (y) => (g.y1 - y) * s;
 
   // 全路网：细线叠加在色块上，既保留地理骨架又不压配色
   if (bm.roads && bm.roads.length) {
@@ -367,12 +395,76 @@ function drawBasemap(ctx, s, g) {
   }
 }
 
+function districtClipPath(bm, units) {
+  const polys = bm.unit_polys;
+  if (!polys || !polys.length || polys.length !== units.x.length) return null;
+  const p = new Path2D();
+  for (const f of polys) {
+    if (!f || f.length < 6) continue;
+    p.moveTo(X(f[0]), Y(f[1]));
+    for (let i = 2; i < f.length; i += 2) p.lineTo(X(f[i]), Y(f[i + 1]));
+    p.closePath();
+  }
+  return p;
+}
+
+/* 预计算每个单元的包围盒（世界坐标），供命中测试快速过滤 */
+function buildBBox() {
+  const bm = (S.boot && S.boot.basemap) || {};
+  const polys = bm.unit_polys;
+  if (!polys || !polys.length || polys.length !== S.boot.units.x.length) {
+    MAP.bbox = null;
+    return;
+  }
+  MAP.bbox = polys.map((f) => {
+    if (!f || f.length < 6) return null;
+    let a = 1e18, b = 1e18, c = -1e18, d = -1e18;
+    for (let i = 0; i < f.length; i += 2) {
+      if (f[i] < a) a = f[i];
+      if (f[i] > c) c = f[i];
+      if (f[i + 1] < b) b = f[i + 1];
+      if (f[i + 1] > d) d = f[i + 1];
+    }
+    return [a, b, c, d];
+  });
+}
+
 function hitTest(ev) {
+  if (!S.boot) return null;
   const rect = $('map').getBoundingClientRect();
-  const g = extentOf();
-  const dx = (ev.clientX - rect.left) / MAP.s + g.x0;
-  const dy = g.y1 - (ev.clientY - rect.top) / MAP.s;
-  return MAP.idx.get(Math.floor((dx - g.x0) / g.cell) + ',' + Math.floor((dy - g.y0) / g.cell)) ?? null;
+  const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+  // 屏幕 → 世界坐标（用当前视图变换的逆变换）
+  const wx = TF.x0 + (px - TF.cx) / TF.s;
+  const wy = TF.y1 - (py - TF.cy) / TF.s;
+  const units = S.boot.units;
+  const bm = (S.boot && S.boot.basemap) || {};
+  const polys = bm.unit_polys;
+
+  if (polys && MAP.bbox && polys.length === units.x.length) {
+    for (let k = 0; k < polys.length; k++) {
+      const bb = MAP.bbox[k];
+      if (!bb) continue;
+      if (wx < bb[0] || wx > bb[2] || wy < bb[1] || wy > bb[3]) continue;
+      const f = polys[k];
+      let inside = false;
+      for (let i = 0, j = f.length - 2; i < f.length; i += 2) {
+        const xi = f[i], yi = f[i + 1], xj = f[j], yj = f[j + 1];
+        if (((yi > wy) !== (yj > wy)) && (wx < (xj - xi) * (wy - yi) / (yj - yi) + xi)) {
+          inside = !inside;
+        }
+        j = i;
+      }
+      if (inside) return k;
+    }
+  }
+  // 没有面数据（内置演示场景/六边形模式）：退回到最近质心，阈值随缩放自适应
+  let best = null, bd = (22 / TF.s) ** 2;
+  for (let k = 0; k < units.x.length; k++) {
+    const dx = units.x[k] - wx, dy = units.y[k] - wy;
+    const d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = k; }
+  }
+  return best;
 }
 
 function showTip(ev, text) {
@@ -972,7 +1064,12 @@ async function resetDemo() {
 async function boot() {
   try {
     const b = await getJSON('/api/bootstrap');
+    if (b.need_select) {
+      await showPicker(b.districts || [], b.current);
+      return;
+    }
     adopt(b);
+    syncDistrictName(b.district || b.project && b.project.name || '');
     const q = new URLSearchParams(location.search);
     const tab = q.get('tab');
     if (tab && ['model', 'diag', 'unit', 'factor'].includes(tab)) switchTab(tab);
@@ -988,7 +1085,7 @@ async function boot() {
 }
 
 $('map').addEventListener('mousemove', (ev) => {
-  if (!S.result) return;
+  if (!S.result || DRAG.on) { $('tip').hidden = true; return; }
   const k = hitTest(ev);
   if (k === null) { $('tip').hidden = true; return; }
   const p = fieldPayload();
@@ -999,6 +1096,7 @@ $('map').addEventListener('mousemove', (ev) => {
 });
 $('map').addEventListener('mouseleave', () => { $('tip').hidden = true; });
 $('map').addEventListener('click', (ev) => {
+  if (DRAG.moved) { DRAG.moved = false; return; }   // 拖拽结束不当作点击
   const k = hitTest(ev);
   if (k === null) return;
   switchTab('unit');
@@ -1251,6 +1349,7 @@ const SCENES = {
   decomp3:   { unit: 246, tab: 'decomp',
                prefs: { rt_metro_time: 0, rt_shop_1km: -0.3 } },          // 有车 + 不喜欢商场
   decomp4:   { unit: 246, tab: 'decomp', price: 125000 },                 // 议价：业主挂牌
+  pick:      { probe: true },
   diag:      { tab: 'diag' },                                 // 空间诊断
   factor:    { tab: 'factor' },                               // 因子设置
   intake:    { modal: 'intake' },                             // 数据接入向导
@@ -1259,10 +1358,12 @@ const SCENES = {
 
 function runScene() {
   try {
-  const m = (location.hash || '').match(/^#scene=([a-z0-9_]+)/i);
+  const m = (location.hash || '').match(/#scene=([a-z0-9_]+)/i);
   if (!m) return;
   const sc = SCENES[m[1].toLowerCase()];
   if (!sc) return;
+  // 数据还没就绪：稍后重试（选区流程也会走到这里）
+  if (!S.boot) { setTimeout(runScene, 350); return; }
 
   const go = () => {
     if (!S.boot) { setTimeout(go, 200); return; }
@@ -1283,6 +1384,25 @@ function runScene() {
       switchTab(sc.tab);
     }
     if (typeof drawMap === 'function') { drawMap(); }
+    if (sc.probe) {
+      const cv = document.getElementById('map');
+      const r = cv.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const hit = hitTest({ clientX: cx, clientY: cy });
+      const t = document.getElementById('stageTitle');
+      if (t) t.textContent = '悬停命中测试：中心点 → '
+        + (hit === null ? '未命中' : S.boot.units.id[hit] + '（索引 ' + hit + '）');
+      const tip = document.getElementById('tip');
+      if (hit !== null && tip) {
+        const p2 = fieldPayload();
+        const v = (p2.v || [])[hit];
+        tip.textContent = S.boot.units.id[hit] + ' · ' + (p2.price ? price(v) + ' 元/㎡' : brief(v));
+        tip.hidden = false;
+        tip.style.left = (r.width / 2) + 'px';
+        tip.style.top = (r.height / 2) + 'px';
+        tip.style.transform = 'translate(-50%,-128%)';
+      }
+    }
     if (sc.unit != null && sc.tab === 'decomp' && sc.price) {
       const setp = (tries) => {
         const el = document.getElementById('dcPrice');
@@ -1322,3 +1442,115 @@ function runScene() {
 }
 
 runScene();
+
+/* =========================================================================
+   画布交互：滚轮缩放 / 拖拽平移 / 双击复位
+   ========================================================================= */
+const DRAG = { on: false, x: 0, y: 0, moved: false };
+
+(function wireCanvas() {
+  const cv = $('map');
+
+  cv.addEventListener('wheel', (ev) => {
+    if (!S.boot) return;
+    ev.preventDefault();
+    const rect = cv.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    const k0 = VIEW.k;
+    const k1 = Math.min(12, Math.max(0.5, k0 * (ev.deltaY < 0 ? 1.2 : 1 / 1.2)));
+    if (k1 === k0) return;
+    // 保持光标下的地理点在缩放前后不动
+    const cx0 = rect.width / 2 + VIEW.dx, cy0 = rect.height / 2 + VIEW.dy;
+    const r = k1 / k0;
+    const cx1 = mx - (mx - cx0) * r;
+    const cy1 = my - (my - cy0) * r;
+    VIEW.dx = cx1 - rect.width / 2;
+    VIEW.dy = cy1 - rect.height / 2;
+    VIEW.k = k1;
+    drawMap();
+    syncZoomLabel();
+  }, { passive: false });
+
+  cv.addEventListener('mousedown', (ev) => {
+    if (ev.button !== 0) return;
+    DRAG.on = true; DRAG.moved = false;
+    DRAG.x = ev.clientX; DRAG.y = ev.clientY;
+    cv.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (ev) => {
+    if (!DRAG.on) return;
+    const dx = ev.clientX - DRAG.x, dy = ev.clientY - DRAG.y;
+    if (Math.abs(dx) + Math.abs(dy) > 2) DRAG.moved = true;
+    VIEW.dx += dx; VIEW.dy += dy;
+    DRAG.x = ev.clientX; DRAG.y = ev.clientY;
+    drawMap();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!DRAG.on) return;
+    DRAG.on = false;
+    cv.style.cursor = '';
+  });
+
+  cv.addEventListener('dblclick', () => { viewReset(); drawMap(); syncZoomLabel(); });
+})();
+
+function syncZoomLabel() {
+  const el = $('zoomLbl');
+  if (el) el.textContent = VIEW.k === 1 ? '1×' : VIEW.k.toFixed(1) + '×';
+}
+
+$('btnZoomReset') && ($('btnZoomReset').onclick = () => {
+  viewReset(); drawMap(); syncZoomLabel();
+});
+
+/* =========================================================================
+   进入时先选行政区
+   ========================================================================= */
+async function showPicker(list, current) {
+  const wrap = $('pickWrap');
+  wrap.hidden = false;
+  const grid = $('pickGrid');
+  grid.innerHTML = list.map(d => `
+    <button class="pickcard" data-name="${d.name}">
+      <b>${d.name}${d.name === current ? ' ✓' : ''}</b>
+      <span>${d.units ? NF.format(d.units) + ' 单元' : ''}${d.obs ? ' · ' + NF.format(d.obs) + ' 成交' : ''}</span>
+      <span class="${d.r2 >= 0.85 ? 'r2' : ''}">${d.r2 != null ? 'R² = ' + d.r2.toFixed(3) : (d.mb ? d.mb + ' MB' : '')}</span>
+    </button>`).join('');
+  // #d=奉贤区 直接选中的深链
+  const dm = (location.hash || '').match(/^#d=([^&]+)/);
+  if (dm) {
+    const want = decodeURIComponent(dm[1]);
+    const hit = grid.querySelector('[data-name="' + want + '"]');
+    if (hit) { setTimeout(() => hit.click(), 120); }
+  }
+  grid.querySelectorAll('.pickcard').forEach(btn => {
+    btn.onclick = async () => {
+      const name = btn.dataset.name;
+      grid.querySelectorAll('.pickcard').forEach(b => b.classList.add('loading'));
+      btn.querySelector('span').textContent = '正在加载……';
+      try {
+        const b2 = await postJSON('/api/district', { name });
+        wrap.hidden = true;
+        adopt(b2);
+        if (window.__afterAdopt) { window.__afterAdopt(); window.__afterAdopt = null; }
+      } catch (e) {
+        toast('加载失败：' + e.message, true);
+        grid.querySelectorAll('.pickcard').forEach(b => b.classList.remove('loading'));
+      }
+    };
+  });
+}
+
+function syncDistrictName(name) {
+  const el = $('districtName');
+  if (el) el.textContent = name || '';
+  const btn = $('btnDistrict');
+  if (btn) btn.hidden = !name;
+}
+
+$('btnDistrict') && ($('btnDistrict').onclick = async () => {
+  const r = await getJSON('/api/districts');
+  showPicker(r.districts || [], r.current);
+});

@@ -173,6 +173,7 @@ function tourPrev() {
     if (location.hash === '#notour') return;
     if ((location.hash || '').indexOf('#decomp') === 0) return;
     if ((location.hash || '').indexOf('#scene') === 0 && location.hash !== '#scene=tour') return;
+    if ((location.hash || '').indexOf('#d=') === 0) return;
     if (location.hash === '#tour') { setTimeout(() => tourStart(0), 300); return; }
     let done = null;
     try { done = localStorage.getItem('seba_tour_done'); } catch (e) {}

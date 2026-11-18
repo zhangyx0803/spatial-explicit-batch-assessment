@@ -8,10 +8,27 @@
 </head>
 <body>
 
+  <div id="pickWrap" hidden>
+    <div class="pickbox">
+      <div class="pickhead">
+        <h1>选择要看哪个区</h1>
+        <p>软件内置上海 16 个区的数据。选一个区，加载后即可在地图上点选地块、做价格拆解。</p>
+      </div>
+      <div class="pickgrid" id="pickGrid"></div>
+      <div class="pickfoot">
+        <span class="hint" style="margin:0">数据为方法演示用；接入真实成交数据后结论才有实际意义。</span>
+      </div>
+    </div>
+  </div>
+
+
 <header class="appbar">
   <div class="mark" title="Spatial Explicit Batch Assessment · 空间显式批量评估">SEBA</div>
   <div class="title"><b>空间显式批量评估工作台</b><span class="v">V1.0</span></div>
   <div class="proj" id="projName">…</div>
+  <button class="btn small" id="btnDistrict" hidden title="切换到别的区">
+    <span id="districtName">徐汇区</span> ⇄
+  </button>
   <div class="grow"></div>
   <div class="elapsed" id="timer"></div>
   <button class="btn ghost" id="btnTour" title="新手引导">?</button>
@@ -46,6 +63,12 @@
           <button class="segbtn" data-geom="dot">质心点</button>
         </div>
         <p class="hint" id="geomHint">按真实村/居委边界填色，能逐块核对。</p>
+
+        <div class="zoomrow">
+          <span class="hint" style="margin:0">滚轮缩放 · 拖拽平移 · 双击复位</span>
+          <span class="zoombox"><b id="zoomLbl">1×</b>
+            <button class="btn tiny" id="btnZoomReset">复位</button></span>
+        </div>
       </div>
     </section>
 

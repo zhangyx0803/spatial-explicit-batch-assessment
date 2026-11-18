@@ -130,6 +130,20 @@ class Handler(BaseHTTPRequestHandler):
                     info = self.state.preview(body.get("b64") or "", body.get("kind") or "units")
                 return self._json({"ok": True, **info})
 
+            if p == "/api/districts":
+                st = self.state
+                return self._json({"ok": True, "current": getattr(st, "current", None),
+                                   "districts": getattr(st, "districts", [])})
+
+            if p == "/api/district":
+                body = self._read_json()
+                name = (body.get("name") or "").strip()
+                if not name:
+                    raise ValueError("缺少区名")
+                with self.lock:
+                    info = self.state.switch_district(name)
+                return self._json({"ok": True, **info})
+
             if p == "/api/decompose":
                 body = self._read_json()
                 with self.lock:
@@ -206,11 +220,16 @@ class Handler(BaseHTTPRequestHandler):
 
 def make_server(cfg_path: str, host: str = "127.0.0.1", port: int = 8765,
                 out_dir: str = "out_web", verbose: bool = True,
-                dataset=None, notes=None, source: str = "demo", prebuilt: bool = False):
+                dataset=None, notes=None, source: str = "demo", prebuilt: bool = False,
+   districts_dir: str = None):
     if verbose:
         print("[1/2] 加载工程、执行因子 DAG …")
-    state = AppState(cfg_path, dataset=dataset, notes=notes, source=source, prebuilt=prebuilt)
-    if verbose:
+    state = AppState(cfg_path, dataset=dataset, notes=notes, source=source,
+                     prebuilt=prebuilt, districts_dir=districts_dir)
+    if verbose and getattr(state, "ds", None) is None:
+        print("      未加载数据：等待用户选择行政区（内置 %d 个）"
+              % len(getattr(state, "districts", [])))
+    elif verbose:
         print("      完成：%d 单元 / %d 成交 / %d 因子，用时 %.1fs"
               % (state.ds.n_units, state.ds.n_obs(),
                len(state.rep.runs) if state.rep is not None else 0, state.load_seconds))
