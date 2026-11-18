@@ -1152,10 +1152,10 @@ function renderDecomp() {
     const c = it.contribution;
     const cc = c > 1 ? 'ok' : (c < -1 ? 'bad' : 'muted');
     const w = Math.round((DEC.pref[it.code] == null ? 1 : DEC.pref[it.code]) * 100);
-    const off = w === 0 ? ' class="off"' : '';
+    const off = w <= 0 ? ' class="off"' : '';
     return '<tr' + off + '>'
-      + '<td class="wcell"><input type="range" min="0" max="100" step="10" value="' + w
-      + '" data-dec="' + it.code + '"><b>' + w + '%</b></td>'
+      + '<td class="wcell"><input type="range" min="-100" max="100" step="10" value="' + w
+      + '" data-dec="' + it.code + '"><b>' + (w > 0 ? '+' : '') + w + '%</b></td>'
       + '<td class="txt">' + it.name + (it.hint ? '<div class="hint2">' + it.hint + '</div>' : '') + '</td>'
       + '<td class="r"><div class="' + cc + '">' + (c >= 0 ? '+' : '') + pint(c) + '</div>'
       + '<div class="civ ' + (it.significant ? '' : 'ns') + '">'
@@ -1167,8 +1167,9 @@ function renderDecomp() {
     sl.oninput = () => {
       const v = parseInt(sl.value, 10) / 100;
       DEC.pref[sl.dataset.dec] = v;
-      sl.parentNode.querySelector('b').textContent = Math.round(v * 100) + '%';
-      sl.closest('tr').classList.toggle('off', v === 0);
+      const pw = Math.round(v * 100);
+      sl.parentNode.querySelector('b').textContent = (pw > 0 ? '+' : '') + pw + '%';
+      sl.closest('tr').classList.toggle('off', pw <= 0);
       renderDecResult();
     };
   });
@@ -1235,3 +1236,89 @@ window.addEventListener('load', () => {
   };
   setTimeout(go, 800);
 });
+
+/* =========================================================================
+   场景深链：#scene=xxx  —— 用于说明书截图，可稳定复现每个步骤的界面状态
+   ========================================================================= */
+const SCENES = {
+  home:      {},                                              // 初始地图
+  hex:       { geom: 'hex' },                                 // 六边形网格
+  dot:       { geom: 'dot' },                                 // 质心点
+  resid:     { field: 'resid' },                              // 残差图层
+  unit:      { unit: 246, tab: 'unit' },                      // 单元详情
+  decomp:    { unit: 246, tab: 'decomp' },                    // 价格拆解
+  decomp2:   { unit: 246, tab: 'decomp', prefs: { rt_metro_time: 0 } },   // 有车：不付地铁钱
+  decomp3:   { unit: 246, tab: 'decomp',
+               prefs: { rt_metro_time: 0, rt_shop_1km: -0.3 } },          // 有车 + 不喜欢商场
+  decomp4:   { unit: 246, tab: 'decomp', price: 125000 },                 // 议价：业主挂牌
+  diag:      { tab: 'diag' },                                 // 空间诊断
+  factor:    { tab: 'factor' },                               // 因子设置
+  intake:    { modal: 'intake' },                             // 数据接入向导
+  import:    { modal: 'import' },                             // 导入表格
+};
+
+function runScene() {
+  try {
+  const m = (location.hash || '').match(/^#scene=([a-z0-9_]+)/i);
+  if (!m) return;
+  const sc = SCENES[m[1].toLowerCase()];
+  if (!sc) return;
+
+  const go = () => {
+    if (!S.boot) { setTimeout(go, 200); return; }
+    if (sc.geom) {
+      S.geom = sc.geom;
+      document.querySelectorAll('#geomSeg .segbtn').forEach(b =>
+        b.classList.toggle('active', b.dataset.geom === sc.geom));
+    }
+    if (sc.field) {
+      const sel = $('fieldSel');
+      if (sel) { sel.value = sc.field; sel.onchange && sel.onchange(); }
+    }
+    if (sc.unit != null) {
+      S.unitIdx = sc.unit;
+      if (sc.tab === 'unit') { switchTab('unit'); showUnit(sc.unit); }
+      if (sc.tab === 'decomp') { switchTab('decomp'); }
+    } else if (sc.tab) {
+      switchTab(sc.tab);
+    }
+    if (typeof drawMap === 'function') { drawMap(); }
+    if (sc.unit != null && sc.tab === 'decomp' && sc.price) {
+      const setp = (tries) => {
+        const el = document.getElementById('dcPrice');
+        if (!el || !DEC.data) { if (tries < 60) setTimeout(() => setp(tries + 1), 150); return; }
+        el.value = sc.price;
+        rerunDecomp();
+      };
+      setTimeout(() => setp(0), 200);
+    }
+    if (sc.unit != null && sc.tab === 'decomp' && sc.prefs) {
+      const apply = (tries) => {
+        if (!DEC.data || !DEC.data.items) {
+          if (tries < 60) { setTimeout(() => apply(tries + 1), 150); }
+          return;
+        }
+        const tbl = $('dcTbl');
+        Object.entries(sc.prefs).forEach(([code, v]) => {
+          DEC.pref[code] = v;
+          const sl = tbl.querySelector('input[data-dec="' + code + '"]');
+          if (sl) {
+            sl.value = Math.round(v * 100);
+            const pw = Math.round(v * 100);
+            const b = sl.parentNode.querySelector('b');
+            if (b) b.textContent = (pw > 0 ? '+' : '') + pw + '%';
+            sl.closest('tr').classList.toggle('off', pw <= 0);
+          }
+        });
+        renderDecResult();
+      };
+      setTimeout(() => apply(0), 200);
+    }
+    if (sc.modal === 'intake') { setTimeout(() => { itkOpen(); itkSample(); }, 500); }
+    if (sc.modal === 'import') { setTimeout(() => { $('importModal').hidden = false; }, 400); }
+  };
+  setTimeout(go, 900);
+  } catch (e) { console.warn("scene error", e); }
+}
+
+runScene();

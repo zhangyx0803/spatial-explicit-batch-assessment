@@ -805,3 +805,6 @@ select.input { cursor: pointer; }
 .dec-tbl td.r { line-height: 1.35; }
 .dec-tbl .civ { font-size: 10px; color: #9aa2ab; font-family: var(--mono); }
 .dec-tbl .civ.ns { color: #b8bec6; }
+
+.dec-tbl .wcell input[type=range] { width: 44px; }
+.dec-tbl .wcell b { width: 32px; }
