@@ -931,7 +931,7 @@ def build_district_dataset(
     grid = Grid(nx=nx, ny=ny, cell=cell_m, x0=gx0, y0=gy0)
     units = UnitTable(
         unit_id=ids, ix=ui, iy=uj, x=cx, y=cy,
-        area=areas, admin_code=streets, use_type=np.array(["住宅"] * len(ids)),
+        area=areas, admin_code=streets, name=np.array(jwnames), use_type=np.array(["住宅"] * len(ids)),
         population=np.round(areas / 120.0).astype(float),  # 按人均 120 ㎡ 粗估
         asof_date="2024",
     )

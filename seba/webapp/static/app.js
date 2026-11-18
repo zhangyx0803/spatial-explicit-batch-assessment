@@ -323,11 +323,30 @@ function drawMap0() {
   ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
 
   if (S.unitIdx != null) {
-    const ux = X(units.x[S.unitIdx]);
-    const uy = Y(units.y[S.unitIdx]);
-    ctx.strokeStyle = '#11161c';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(ux - 1, uy - 1, Math.ceil(size) + 2, Math.ceil(size) + 2);
+    const polys = (S.boot.basemap || {}).unit_polys;
+    const f = polys && polys[S.unitIdx];
+    ctx.save();
+    if (f && f.length >= 6) {
+      ctx.beginPath();
+      ctx.moveTo(X(f[0]), Y(f[1]));
+      for (let i = 2; i < f.length; i += 2) ctx.lineTo(X(f[i]), Y(f[i + 1]));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 236, 120, .45)';
+      ctx.fill();
+      ctx.strokeStyle = '#c9a227';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      const ux = X(units.x[S.unitIdx]), uy = Y(units.y[S.unitIdx]);
+      ctx.beginPath();
+      ctx.arc(ux, uy, Math.max(5, size * 0.7), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 236, 120, .55)';
+      ctx.fill();
+      ctx.strokeStyle = '#c9a227';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   $('stageTitle').textContent = p.title;
@@ -652,8 +671,8 @@ async function showUnit(idx) {
     const u = await getJSON('/api/unit?i=' + idx);
     $('unitEmpty').hidden = true;
     $('unitBody').hidden = false;
-    $('uId').textContent = u.unit_id;
-    $('uAdmin').textContent = `${u.admin} · 坐标 ${num(u.x, 0)}, ${num(u.y, 0)} · ${num(u.area, 0)} ㎡`;
+    $('uId').textContent = u.unit_name || u.unit_id;
+    $('uAdmin').textContent = `${u.admin} · ${u.unit_id} · ${num(u.area, 0)} ㎡`;
 
     const items = [
       ['估值单价（中位）', price(u.est_median) + ' 元/㎡', 'mid'],
@@ -679,16 +698,20 @@ async function showUnit(idx) {
    ========================================================================= */
 function renderFactorCards() {
   const box = $('factorCards');
-  box.innerHTML = (S.boot.factors || []).map(f => {
+  const valid = (S.boot.factors || []).filter(f => !f.invalid);
+  const bad = (S.boot.factors || []).filter(f => f.invalid);
+  const card = (f) => {
     const open = S.openCard === f.code;
-    return `<div class="fcard${f.selected ? '' : ' off'}" data-code="${f.code}">
+    const dis = f.invalid ? ' disabled' : '';
+    return `<div class="fcard${f.selected && !f.invalid ? '' : ' off'}${f.invalid ? ' bad' : ''}" data-code="${f.code}">
       <div class="fcard-h" data-toggle="${f.code}">
-        <input type="checkbox" data-en="${f.code}" ${f.selected ? 'checked' : ''} title="参与建模">
+        <input type="checkbox" data-en="${f.code}" ${f.selected && !f.invalid ? 'checked' : ''}${dis} title="${f.invalid ? '该因子取值几乎恒定，已自动剔除' : '参与建模'}">
         <span class="nm">${f.name}</span>
-        <span class="op">${f.op_name}</span>
+        <span class="op">${f.invalid ? '已剔除' : f.op_name}</span>
         <span class="ex">${open ? '收起' : '设置'}</span>
       </div>
-      <div class="fcard-b" ${open ? '' : 'hidden'}>
+      ${f.invalid ? `<div class="fcard-b"><div class="fwhy">该因子在所选区域 96% 以上的单元取值相同，无法区分高低，建模时已自动剔除。换一个区或调整参数后可能恢复。</div></div>` : ''}
+      <div class="fcard-b" ${open && !f.invalid ? '' : 'hidden'}>
         <div class="form">${paramForm(f)}</div>
         <div class="row2">
           <button class="btn small" data-save="${f.code}">保存并重算</button>
@@ -696,42 +719,9 @@ function renderFactorCards() {
         </div>
       </div>
     </div>`;
-  }).join('');
-
-  box.querySelectorAll('[data-toggle]').forEach(el => {
-    el.onclick = (ev) => {
-      if (ev.target.tagName === 'INPUT') return;
-      const code = el.dataset.toggle;
-      S.openCard = S.openCard === code ? null : code;
-      renderFactorCards();
-    };
-  });
-  box.querySelectorAll('[data-en]').forEach(el => {
-    el.onchange = async () => {
-      const code = el.dataset.en;
-      setBusy(true);
-      try {
-        const j = await postJSON('/api/factors/update', { changes: { [code]: { enabled: el.checked } } });
-        adopt(j);
-        toast('已更新：' + code);
-      } catch (e) { toast(e.message, true); }
-      finally { setBusy(false); }
-    };
-  });
-  box.querySelectorAll('[data-save]').forEach(el => {
-    el.onclick = async () => {
-      const code = el.dataset.save;
-      const card = box.querySelector(`.fcard[data-code="${code}"]`);
-      try {
-        const params = readParamForm(card);
-        setBusy(true);
-        const j = await postJSON('/api/factors/update', { changes: { [code]: { params } } });
-        adopt(j);
-        toast('参数已保存，模型已重算');
-      } catch (e) { toast(e.message, true); }
-      finally { setBusy(false); }
-    };
-  });
+  };
+  box.innerHTML = valid.map(card).join('')
+    + (bad.length ? `<div class="fgroup">以下 ${bad.length} 个因子已自动剔除（灰色，不可勾选）</div>` + bad.map(card).join('') : '');
 }
 
 function paramForm(f) {
@@ -1090,9 +1080,9 @@ $('map').addEventListener('mousemove', (ev) => {
   if (k === null) { $('tip').hidden = true; return; }
   const p = fieldPayload();
   const v = (p.v || [])[k];
-  const id = S.boot.units.id[k];
-  showTip(ev, (v === null || v === undefined) ? `${id} · 无成交`
-    : (p.price ? `${id} · ${price(v)} 元/㎡` : `${id} · ${brief(v)}`));
+  const nm = (S.boot.units.name && S.boot.units.name[k]) || S.boot.units.id[k];
+  showTip(ev, (v === null || v === undefined) ? `${nm} · 无成交`
+    : (p.price ? `${nm} · ${price(v)} 元/㎡` : `${nm} · ${brief(v)}`));
 });
 $('map').addEventListener('mouseleave', () => { $('tip').hidden = true; });
 $('map').addEventListener('click', (ev) => {
@@ -1222,7 +1212,8 @@ async function rerunDecomp() {
 function renderDecomp() {
   const d = DEC.data;
   if (!d) return;
-  $('dcUnit').textContent = d.unit_id;
+  $('dcUnit').textContent = (d.unit_name || d.unit_id);
+  $('dcUnit').title = d.unit_id;
   $('dcMeta').textContent = '　周边 ' + Math.round(d.radius) + ' 米　' + d.n_samples + ' 套成交　R²=' + d.r2.toFixed(2);
   $('dcPrice').value = Math.round(d.asking_price);
   $('dcBase').textContent = price(d.base_price);
@@ -1236,8 +1227,9 @@ function renderDecomp() {
   if (d.n_samples < 100) issues.push('样本仅 ' + d.n_samples + ' 套，系数估计不稳');
   if (d.r2 < 0.5) issues.push('局部模型 R² 仅 ' + d.r2.toFixed(2) + '，解释力偏弱');
   if (d.bad_sign && d.bad_sign.length) issues.push('部分因子系数方向与常识相反：' + d.bad_sign.slice(0, 2).join('、'));
-  if (Math.abs(ue) / d.asking_price > 0.15) {
-    issues.push('有 ' + Math.round(Math.abs(ue) / d.asking_price * 100) + '% 的价格无法被因素解释');
+  const uep = Math.abs(ue) / d.asking_price * 100;
+  if (uep > 15) {
+    issues.push('本例中 ' + Math.round(uep) + '% 的价格找不到因素依据（见下方说明）');
   }
   const lvl = issues.length === 0 ? '高' : (issues.length === 1 ? '中' : '低');
   const cls = issues.length === 0 ? 'ok' : (issues.length === 1 ? 'mid' : 'bad');
@@ -1279,35 +1271,34 @@ function renderDecResult() {
   const d = DEC.data;
   if (!d) return;
   let adapted = d.base_price;
-  const list = [];
+  const cut = [];
   for (const it of d.items) {
     const w = DEC.pref[it.code] == null ? 1 : DEC.pref[it.code];
     adapted += w * it.contribution;
-    if (w < 1 && it.contribution > 0) {
-      list.push({ name: it.name, cut: (1 - w) * it.contribution });
-    }
+    if (w !== 1) cut.push({ name: it.name, gap: (1 - w) * it.contribution, w: w });
   }
-  const area = 90;
-  const anyOff = d.items.some(it => (DEC.pref[it.code] == null ? 1 : DEC.pref[it.code]) < 1);
-  // 全部勾选时，适配价严格等于市场价（避免逐项取整产生的 1-2 元误差）
+  const anyOff = cut.length > 0;
   if (!anyOff) adapted = d.model_price;
   const diff = d.model_price - adapted;
+  const pct = d.model_price ? Math.round(Math.abs(diff) / d.model_price * 100) : 0;
 
   let html = '<div class="dec-row"><span>市场合理价</span><b>' + price(d.model_price) + ' 元/㎡</b></div>';
-  html += '<div class="dec-row hl"><span>对你而言的适配价</span><b>' + price(adapted) + ' 元/㎡</b></div>';
+  html += '<div class="dec-row hl"><span>按你的标准</span><b>' + price(adapted) + ' 元/㎡</b></div>';
   if (anyOff) {
-    html += '<div class="dec-row"><span>' + (diff > 0 ? '你为不需要的东西多付' : '你占到的便宜') + '</span>'
-      + '<b class="' + (diff > 0 ? 'bad' : 'ok') + '">' + price(Math.abs(diff)) + ' 元/㎡</b></div>';
-    html += '<div class="dec-note">按 ' + area + ' ㎡ 折算：市场 '
-      + NF.format(Math.round(d.model_price * area)) + ' 元　→　适配 '
-      + NF.format(Math.round(adapted * area)) + ' 元　（差 '
-      + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
-    if (list.length) {
-      html += '<div class="dec-note">冤枉钱：'
-        + list.map(it => it.name + ' ' + price(it.cut) + ' 元/㎡').join('、') + '</div>';
+    if (diff > 0) {
+      html += '<div class="dec-row"><span>两者差额</span><b>' + price(diff) + ' 元/㎡（占市场价 ' + pct + '%）</b></div>';
+      html += '<div class="dec-note">差额来自你把某些因素调低：这些价值在市场上确实存在，只是你不消费它。</div>';
+      const pos = cut.filter(x => x.gap > 1);
+      if (pos.length) {
+        html += '<div class="dec-note">构成：' + pos.map(x =>
+          x.name + ' ' + price(x.gap) + ' 元/㎡' + (x.w < 0 ? '（反价）' : '') ).join('；') + '</div>';
+      }
+    } else {
+      html += '<div class="dec-row"><span>两者差额</span><b>+' + price(-diff) + ' 元/㎡（占市场价 ' + pct + '%）</b></div>';
+      html += '<div class="dec-note">按你的标准，这套房对你的价值高于市场价——你更看重的因素它恰好占优。</div>';
     }
   } else {
-    html += '<div class="dec-note muted">把用不上的因素拉低（比如有车不需要地铁拉到 0%），看适配价能降多少。</div>';
+    html += '<div class="dec-note muted">把用不上的因素调低（例如有车不必为地铁付费），上方数值会立即变化。</div>';
   }
   $('dcResult').innerHTML = html;
 }
@@ -1360,7 +1351,10 @@ const SCENES = {
 
 function runScene() {
   try {
-  const m = (location.hash || '').match(/#scene=([a-z0-9_]+)/i);
+  const _q = new URLSearchParams(location.search);
+  const _m = (location.hash || '').match(/#scene=([a-z0-9_]+)/i)
+    || (_q.get('scene') ? [null, _q.get('scene')] : null);
+  const m = _m;
   if (!m) return;
   const sc = SCENES[m[1].toLowerCase()];
   if (!sc) return;
@@ -1399,7 +1393,7 @@ function runScene() {
       if (hit !== null && tip) {
         const p2 = fieldPayload();
         const v = (p2.v || [])[hit];
-        tip.textContent = S.boot.units.id[hit] + ' · ' + (p2.price ? price(v) + ' 元/㎡' : brief(v));
+        tip.textContent = (S.boot.units.name && S.boot.units.name[hit]) || S.boot.units.id[hit];
         tip.hidden = false;
         tip.style.left = (r.width / 2) + 'px';
         tip.style.top = (r.height / 2) + 'px';

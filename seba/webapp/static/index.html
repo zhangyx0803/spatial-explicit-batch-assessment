@@ -63,12 +63,6 @@
           <button class="segbtn" data-geom="dot">质心点</button>
         </div>
         <p class="hint" id="geomHint">按真实村/居委边界填色，能逐块核对。</p>
-
-        <div class="zoomrow">
-          <span class="hint" style="margin:0">滚轮缩放 · 拖拽平移 · 双击复位</span>
-          <span class="zoombox"><b id="zoomLbl">1×</b>
-            <button class="btn tiny" id="btnZoomReset">复位</button></span>
-        </div>
       </div>
     </section>
 
@@ -215,6 +209,22 @@
             <div><span class="k">样本</span><span class="v" id="dcSample"></span></div>
           </div>
           <div class="dec-quality" id="dcQuality"></div>
+
+          <details class="dec-help">
+            <summary>「未解释」是什么意思？占比高是好事还是坏事？</summary>
+            <div>
+              <p><b>定义：</b>未解释 = 待拆解价格 − 各因素加总。也就是这个价格里，
+                模型找不到因素依据的那一部分。</p>
+              <p><b>来源：</b>通常是楼层、朝向、装修、房龄、业主急售等没有进入模型的信息。</p>
+              <p><b>不是好坏，是"能解释多少"：</b></p>
+              <ul>
+                <li>占比低（&lt;15%）：这套房的定价基本由位置和配套决定，拆解结果更可靠。</li>
+                <li>占比高（&gt;30%）：还有重要信息没被纳入，此时应看置信区间，而不是只看点值。</li>
+              </ul>
+              <p><b>与买卖谁占便宜无关：</b>它按绝对值统计。你买得比模型价低，
+                表现为负的未解释；买得高，表现为正的未解释。两种都计入这个比例。</p>
+            </div>
+          </details>
 
           <h3 class="sec">价格构成 <span class="muted small">勾掉你用不上的因素，下面的适配价会实时变化</span></h3>
           <table class="tbl dec-tbl" id="dcTbl">

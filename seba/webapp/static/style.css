@@ -834,3 +834,32 @@ select.input { cursor: pointer; }
 .pickcard.loading{opacity:.55;pointer-events:none}
 .pickfoot{padding:0 30px 20px;border-top:1px solid #f0f2f4;padding-top:12px}
 @media(max-width:820px){.pickgrid{grid-template-columns:repeat(2,1fr)}}
+
+/* 布局修正：卡片可收缩、图层区不被裁掉 */
+.col { min-height: 0; }
+.card { display: flex; flex-direction: column; min-height: 0; }
+.card.grow { flex: 1 1 0; min-height: 90px; }
+.card.grow .layers { flex: 1 1 auto; min-height: 0; }
+
+/* 因子设置：被剔除的因子 */
+.fcard.bad { opacity: .62; }
+.fcard.bad .fcard-h { cursor: default; }
+.fcard-b .fwhy { font-size: 10.5px; color: #8d959f; line-height: 1.75; padding: 4px 2px 2px; }
+.fgroup { font-size: 10.5px; color: #9aa2ab; margin: 12px 0 6px; padding-top: 8px;
+  border-top: 1px dashed var(--line); }
+
+/* 拆解说明文字 */
+.dec-note b { font-weight: 600; }
+
+/* 拆解说明折叠块 */
+.dec-help{margin:0 12px 10px;font-size:11px;color:#6d757e;border:1px solid #eceff2;
+  border-radius:3px;background:#fbfcfd}
+.dec-help summary{cursor:pointer;padding:6px 9px;color:#1f4e5f;font-weight:600;
+  list-style:none;user-select:none}
+.dec-help summary::-webkit-details-marker{display:none}
+.dec-help summary:before{content:'▸ ';color:#9aa2ab}
+.dec-help[open] summary:before{content:'▾ '}
+.dec-help>div{padding:0 10px 8px;line-height:1.85}
+.dec-help p{margin:3px 0}
+.dec-help ul{margin:3px 0 3px 16px;padding:0}
+.dec-help li{margin:2px 0}

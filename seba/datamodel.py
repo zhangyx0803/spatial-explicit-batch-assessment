@@ -68,6 +68,7 @@ class UnitTable:
     asof_date: str
     x: Optional[np.ndarray] = None
     y: Optional[np.ndarray] = None
+    name: Optional[np.ndarray] = None
 
     def __post_init__(self) -> None:
         if self.x is None or self.y is None:
@@ -114,6 +115,7 @@ class LayerData:
     # point / polygon / network 的坐标；raster 用 value + transform
     x: Optional[np.ndarray] = None
     y: Optional[np.ndarray] = None
+    name: Optional[np.ndarray] = None
     attrs: Dict[str, np.ndarray] = field(default_factory=dict)
     polygons: List[tuple] = field(default_factory=list)   # 本演示版：轴对齐矩形
     nodes: Optional[np.ndarray] = None                    # (n, 2) 路网节点

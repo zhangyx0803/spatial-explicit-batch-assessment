@@ -269,6 +269,8 @@ class AppState:
         for code in self.pool:
             f = self.cfg.factor(code)
             arr = self.ds.attrs[code]
+            import numpy as _np
+            lo, hi = _np.percentile(arr, 2), _np.percentile(arr, 98)
             rows.append({
                 "code": code,
                 "name": factor_name(code, f.note),
@@ -281,6 +283,7 @@ class AppState:
                 "sd": float(np.std(arr)),
                 "selected": code in self.features,
                 "editable": code not in FACTOR_CN,
+                "invalid": bool(lo >= hi),
             })
         return rows
 
@@ -346,6 +349,8 @@ class AppState:
                 "x": _num(u.x, 2),
                 "y": _num(u.y, 2),
                 "admin": u.admin_code.tolist(),
+                "name": [str(x) for x in (
+                    getattr(u, "name", None) if getattr(u, "name", None) is not None else u.unit_id)],
                 "area": _num(u.area, 0),
             },
             "has_obs": [bool(v) for v in np.isin(np.arange(self.ds.n_units), self.ds.obs.unit_idx)],
@@ -374,19 +379,31 @@ class AppState:
         w = {c: 1.0 for c in feats}
         dec = _dec(self.ds, w, int(idx), asking_price=price,
                            radius=float(radius), min_n=int(min_n))
+        _names = {}
+        for _f in self.cfg.factors:
+            _names[_f.code] = factor_name(_f.code, _f.note or "")
         items = []
         for it in dec.items:
             items.append({
                 "code": it.code,
-                "name": it.name,
+                "name": _names.get(it.code, it.name),
                 "hint": BUYER_HINT.get(it.code, ""),
                 "contribution": round(float(it.contribution)),
                 "lo": round(float(it.lo)),
                 "hi": round(float(it.hi)),
                 "significant": not (it.lo <= 0 <= it.hi),
             })
+        _ui = int(idx)
+        _uname = ""
+        try:
+            _nm = getattr(self.ds.units, "name", None)
+            if _nm is not None and _ui < len(_nm):
+                _uname = str(_nm[_ui])
+        except Exception:
+            _uname = ""
         return {
             "unit_id": dec.unit_id,
+            "unit_name": _uname,
             "asking_price": round(dec.asking_price),
             "base_price": round(dec.base_price),
             "model_price": round(dec.model_price),
@@ -416,6 +433,7 @@ class AppState:
             "unit_id": str(u.unit_id[idx]),
             "x": float(u.x[idx]), "y": float(u.y[idx]),
             "admin": str(u.admin_code[idx]),
+            "unit_name": (str(u.name[idx]) if getattr(u, "name", None) is not None else ""),
             "area": float(u.area[idx]),
             "population": float(u.population[idx]),
             "est_median": a["est_median"][idx],
