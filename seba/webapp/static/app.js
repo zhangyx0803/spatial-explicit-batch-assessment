@@ -1350,6 +1350,8 @@ const SCENES = {
                prefs: { rt_metro_time: 0, rt_shop_1km: -0.3 } },          // 有车 + 不喜欢商场
   decomp4:   { unit: 246, tab: 'decomp', price: 125000 },                 // 议价：业主挂牌
   pick:      { probe: true },
+  hover:     { probe: true, quiet: true },
+  zoom:      { zoom: 2.6 },
   diag:      { tab: 'diag' },                                 // 空间诊断
   factor:    { tab: 'factor' },                               // 因子设置
   intake:    { modal: 'intake' },                             // 数据接入向导
@@ -1384,13 +1386,14 @@ function runScene() {
       switchTab(sc.tab);
     }
     if (typeof drawMap === 'function') { drawMap(); }
+    if (sc.zoom) { VIEW.k = sc.zoom; drawMap(); syncZoomLabel(); }
     if (sc.probe) {
       const cv = document.getElementById('map');
       const r = cv.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       const hit = hitTest({ clientX: cx, clientY: cy });
       const t = document.getElementById('stageTitle');
-      if (t) t.textContent = '悬停命中测试：中心点 → '
+      if (t && !sc.quiet) t.textContent = '悬停命中测试：中心点 → '
         + (hit === null ? '未命中' : S.boot.units.id[hit] + '（索引 ' + hit + '）');
       const tip = document.getElementById('tip');
       if (hit !== null && tip) {
