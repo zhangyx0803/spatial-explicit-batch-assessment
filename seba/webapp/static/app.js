@@ -555,6 +555,7 @@ function renderDiag() {
 async function showUnit(idx) {
   S.unitIdx = idx;
   drawMap();
+  if (S.tab === 'decomp') { showDecomp(idx); }
   try {
     const u = await getJSON('/api/unit?i=' + idx);
     $('unitEmpty').hidden = true;
@@ -1009,8 +1010,10 @@ $('tabs').addEventListener('click', (ev) => {
   if (b) switchTab(b.dataset.tab);
 });
 function switchTab(name) {
+  S.tab = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  ['model', 'diag', 'unit', 'factor'].forEach(n => { $('tab-' + n).hidden = (n !== name); });
+  if (name === 'decomp' && S.unitIdx != null && !DEC.data) { showDecomp(S.unitIdx); }
+  ['model', 'diag', 'unit', 'factor', 'decomp'].forEach(n => { $('tab-' + n).hidden = (n !== name); });
 }
 
 $('btnAll').onclick = () => { S.boot.factors.forEach(f => S.selected.add(f.code)); renderFeatures(); scheduleRun(); };
@@ -1079,3 +1082,148 @@ const GEOM_HINT = {
   }
   window.wiredGeom = true;
 })();
+
+/* =========================================================================
+   右栏：价格拆解 + 个性化适配
+   ========================================================================= */
+const DEC = { data: null, pref: {}, idx: null };
+
+async function showDecomp(idx) {
+  if (idx == null) return;
+  DEC.idx = idx;
+  $('decompEmpty').hidden = true;
+  $('decompBody').hidden = false;
+  $('dcTbl').querySelector('tbody').innerHTML =
+    '<tr><td colspan="4" class="muted" style="padding:14px">正在拆解……（首次约 1–3 秒）</td></tr>';
+  try {
+    const d = await postJSON('/api/decompose', { i: idx, price: null, radius: 1500, min_n: 120 });
+    DEC.data = d;
+    DEC.pref = {};
+    d.items.forEach(it => { DEC.pref[it.code] = 1; });
+    renderDecomp();
+  } catch (e) {
+    $('dcTbl').querySelector('tbody').innerHTML =
+      '<tr><td colspan="4" class="bad" style="padding:14px">' + e.message + '</td></tr>';
+  }
+}
+
+async function rerunDecomp() {
+  if (DEC.idx == null) return;
+  const p = parseFloat($('dcPrice').value) || null;
+  $('dcTbl').querySelector('tbody').innerHTML =
+    '<tr><td colspan="4" class="muted" style="padding:14px">正在按新价格重新拆解……</td></tr>';
+  try {
+    const d = await postJSON('/api/decompose', { i: DEC.idx, price: p, radius: 1500, min_n: 120 });
+    DEC.data = d;
+    d.items.forEach(it => { if (!(it.code in DEC.pref)) DEC.pref[it.code] = 1; });
+    renderDecomp();
+  } catch (e) { toast(e.message, true); }
+}
+
+function renderDecomp() {
+  const d = DEC.data;
+  if (!d) return;
+  $('dcUnit').textContent = d.unit_id;
+  $('dcMeta').textContent = '　周边 ' + Math.round(d.radius) + ' 米　' + d.n_samples + ' 套成交　R²=' + d.r2.toFixed(2);
+  $('dcPrice').value = Math.round(d.asking_price);
+  $('dcBase').textContent = price(d.base_price);
+  $('dcModel').textContent = price(d.model_price);
+  const ue = d.unexplained;
+  const ueCls = Math.abs(ue) / d.asking_price > 0.15 ? 'warn' : '';
+  $('dcUnexp').innerHTML = '<span class="' + ueCls + '">' + (ue >= 0 ? '+' : '') + price(ue) + '</span>';
+  $('dcSample').textContent = d.n_samples + ' 套';
+
+  const issues = [];
+  if (d.n_samples < 100) issues.push('样本仅 ' + d.n_samples + ' 套，系数估计不稳');
+  if (d.r2 < 0.5) issues.push('局部模型 R² 仅 ' + d.r2.toFixed(2) + '，解释力偏弱');
+  if (d.bad_sign && d.bad_sign.length) issues.push('部分因子系数方向与常识相反：' + d.bad_sign.slice(0, 2).join('、'));
+  if (Math.abs(ue) / d.asking_price > 0.15) {
+    issues.push('有 ' + Math.round(Math.abs(ue) / d.asking_price * 100) + '% 的价格无法被因素解释');
+  }
+  const lvl = issues.length === 0 ? '高' : (issues.length === 1 ? '中' : '低');
+  const cls = issues.length === 0 ? 'ok' : (issues.length === 1 ? 'mid' : 'bad');
+  $('dcQuality').innerHTML = '<span class="pill ' + cls + '">拆解可信度 ' + lvl + '</span>'
+    + (issues.length
+        ? '<ul class="qlist">' + issues.map(x => '<li>' + x + '</li>').join('') + '</ul>'
+        : '<span class="muted small" style="margin-left:8px">样本量充足、解释力可接受</span>');
+
+  $('dcTbl').querySelector('tbody').innerHTML = d.items.map(it => {
+    const c = it.contribution;
+    const cc = c > 1 ? 'ok' : (c < -1 ? 'bad' : 'muted');
+    const off = DEC.pref[it.code] === 0 ? ' class="off"' : '';
+    return '<tr' + off + '>'
+      + '<td><input type="checkbox" data-dec="' + it.code + '"' + (DEC.pref[it.code] ? ' checked' : '') + '></td>'
+      + '<td class="txt">' + it.name + (it.hint ? '<div class="hint2">' + it.hint + '</div>' : '') + '</td>'
+      + '<td class="r ' + cc + '">' + (c >= 0 ? '+' : '') + price(c) + '</td>'
+      + '<td class="r muted small">' + price(it.lo) + ' ~ ' + price(it.hi) + (it.significant ? '' : ' ?') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  $('dcTbl').querySelectorAll('input[data-dec]').forEach(cb => {
+    cb.onchange = () => {
+      DEC.pref[cb.dataset.dec] = cb.checked ? 1 : 0;
+      cb.closest('tr').classList.toggle('off', !cb.checked);
+      renderDecResult();
+    };
+  });
+
+  renderDecResult();
+}
+
+function renderDecResult() {
+  const d = DEC.data;
+  if (!d) return;
+  let adapted = d.base_price;
+  const list = [];
+  for (const it of d.items) {
+    const w = DEC.pref[it.code] === 0 ? 0 : 1;
+    adapted += w * it.contribution;
+    if (!w && it.contribution > 0) list.push(it);
+  }
+  const area = 90;
+  const anyOff = d.items.some(it => DEC.pref[it.code] === 0);
+  // 全部勾选时，适配价严格等于市场价（避免逐项取整产生的 1-2 元误差）
+  if (!anyOff) adapted = d.model_price;
+  const diff = d.model_price - adapted;
+
+  let html = '<div class="dec-row"><span>市场合理价</span><b>' + price(d.model_price) + ' 元/㎡</b></div>';
+  html += '<div class="dec-row hl"><span>对你而言的适配价</span><b>' + price(adapted) + ' 元/㎡</b></div>';
+  if (anyOff) {
+    html += '<div class="dec-row"><span>' + (diff > 0 ? '你为不需要的东西多付' : '你占到的便宜') + '</span>'
+      + '<b class="' + (diff > 0 ? 'bad' : 'ok') + '">' + price(Math.abs(diff)) + ' 元/㎡</b></div>';
+    html += '<div class="dec-note">按 ' + area + ' ㎡ 折算：市场 '
+      + NF.format(Math.round(d.model_price * area)) + ' 元　→　适配 '
+      + NF.format(Math.round(adapted * area)) + ' 元　（差 '
+      + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
+    if (list.length) {
+      html += '<div class="dec-note">冤枉钱：'
+        + list.map(it => it.name + ' ' + price(it.contribution) + ' 元/㎡').join('、') + '</div>';
+    }
+  } else {
+    html += '<div class="dec-note muted">勾掉你用不上的因素（比如有车不需要地铁），看适配价能降多少。</div>';
+  }
+  $('dcResult').innerHTML = html;
+}
+
+$('dcRun').onclick = rerunDecomp;
+$('dcUseObs').onclick = () => { $('dcPrice').value = ''; rerunDecomp(); };
+
+/* 支持 #decomp=<单元序号> 直接打开价格拆解（便于分享与截图） */
+window.addEventListener('load', () => {
+  const h = location.hash || '';
+  if (!h.startsWith('#decomp')) return;
+  const m = h.match(/^#decomp=(\d+)/);
+  let idx = m ? parseInt(m[1], 10) : null;
+  const go = () => {
+    if (!S.boot) { setTimeout(go, 200); return; }
+    if (idx == null) {
+      const i = (S.boot.has_obs || []).findIndex(v => v);
+      idx = i >= 0 ? i : 0;
+    }
+    S.unitIdx = idx;
+    switchTab('decomp');
+    showDecomp(idx);
+    drawMap();
+  };
+  setTimeout(go, 800);
+});

@@ -95,6 +95,7 @@
       <button class="tab active" data-tab="model">估值模型</button>
       <button class="tab" data-tab="diag">空间诊断</button>
       <button class="tab" data-tab="unit">单元详情</button>
+        <button class="tab" data-tab="decomp">价格拆解</button>
       <button class="tab" data-tab="factor">因子设置</button>
     </div>
 
@@ -164,7 +165,47 @@
       </div>
     </div>
 
-    <div class="tabbody" id="tab-factor" hidden>
+    <div class="tabbody" id="tab-decomp" hidden>
+        <div id="decompEmpty" class="emptytip">
+          在左侧地图上点选一个地块，这里会把它拆成「各项因素各值多少钱」，<br>
+          并可按你自己的需求重新算出一个适配价。
+        </div>
+
+        <div id="decompBody" hidden>
+          <div class="dec-head">
+            <div><b id="dcUnit"></b><span class="muted" id="dcMeta"></span></div>
+            <div class="dec-price">
+              <label>待拆解价格</label>
+              <input id="dcPrice" class="input" type="number" step="100">
+              <span class="unit">元/㎡</span>
+            </div>
+            <div class="dec-actions">
+              <button class="btn small" id="dcUseObs">用成交价</button>
+              <button class="btn small primary" id="dcRun">重新拆解</button>
+            </div>
+          </div>
+
+          <div class="dec-sum">
+            <div><span class="k">局部基准价</span><span class="v" id="dcBase"></span></div>
+            <div><span class="k">因素加总</span><span class="v" id="dcModel"></span></div>
+            <div><span class="k">未解释</span><span class="v" id="dcUnexp"></span></div>
+            <div><span class="k">样本</span><span class="v" id="dcSample"></span></div>
+          </div>
+          <div class="dec-quality" id="dcQuality"></div>
+
+          <h3 class="sec">价格构成 <span class="muted small">勾掉你用不上的因素，下面的适配价会实时变化</span></h3>
+          <table class="tbl dec-tbl" id="dcTbl">
+            <thead><tr>
+              <th style="width:26px"></th><th>因素</th><th class="r">贡献</th><th class="r">90% 区间</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="dec-result" id="dcResult"></div>
+        </div>
+      </div>
+
+<div class="tabbody" id="tab-factor" hidden>
       <p class="note" style="margin:0 0 8px">
         每张卡片是一个因子。改完参数点右上「保存并重算」，模型与地图会立刻更新。
         中文名可直接修改，用于报告与图例。

@@ -130,6 +130,17 @@ class Handler(BaseHTTPRequestHandler):
                     info = self.state.preview(body.get("b64") or "", body.get("kind") or "units")
                 return self._json({"ok": True, **info})
 
+            if p == "/api/decompose":
+                body = self._read_json()
+                with self.lock:
+                    info = self.state.decompose_unit(
+                        int(body.get("i") or 0),
+                        price=body.get("price") or None,
+                        radius=float(body.get("radius") or 1500.0),
+                        min_n=int(body.get("min_n") or 60),
+                    )
+                return self._json({"ok": True, **info})
+
             if p == "/api/intake/upload":
                 body = self._read_json()
                 with self.lock:

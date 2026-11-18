@@ -315,6 +315,40 @@ class AppState:
             "min": float(np.min(arr)), "max": float(np.max(arr)), "mean": float(np.mean(arr)),
         }
 
+    def decompose_unit(self, idx: int, price=None, radius=1500.0, min_n=60) -> Dict:
+        """价格拆解 + 个性化适配所需的数据。"""
+        from ..decompose import BUYER_HINT, decompose as _dec
+
+        feats = [c for c in (self.cfg.model.get("features") or []) if c in self.ds.attrs]
+        if not feats:
+            raise ValueError("没有可用因子")
+        w = {c: 1.0 for c in feats}
+        dec = _dec(self.ds, w, int(idx), asking_price=price,
+                           radius=float(radius), min_n=int(min_n))
+        items = []
+        for it in dec.items:
+            items.append({
+                "code": it.code,
+                "name": it.name,
+                "hint": BUYER_HINT.get(it.code, ""),
+                "contribution": round(float(it.contribution)),
+                "lo": round(float(it.lo)),
+                "hi": round(float(it.hi)),
+                "significant": not (it.lo <= 0 <= it.hi),
+            })
+        return {
+            "unit_id": dec.unit_id,
+            "asking_price": round(dec.asking_price),
+            "base_price": round(dec.base_price),
+            "model_price": round(dec.model_price),
+            "unexplained": round(dec.unexplained),
+            "n_samples": dec.n_samples,
+            "radius": round(dec.radius, 0),
+            "r2": round(dec.r2, 3),
+            "bad_sign": dec.bad_sign,
+            "items": items,
+        }
+
     def unit_detail(self, idx: int) -> Dict:
         if idx < 0 or idx >= self.ds.n_units:
             raise IndexError("单元序号越界")

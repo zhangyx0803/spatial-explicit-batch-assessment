@@ -733,3 +733,58 @@ select.input { cursor: pointer; }
 .cdot.l3 { background: #2f5f7d; }
 .cline { display: inline-block; width: 16px; height: 2px; background: rgba(74,86,100,.55); margin-left: 8px; }
 .cbox { display: inline-block; width: 12px; height: 9px; background: #dce8f2; border: 1px solid #b9cfe0; margin-left: 8px; }
+
+/* =========================================================================
+   价格拆解页签
+   ========================================================================= */
+.emptytip {
+  padding: 26px 18px; text-align: center; font-size: 12.5px;
+  line-height: 1.9; color: #8d959f;
+}
+.dec-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+  background: #fafbfc;
+}
+.dec-head b { font-size: 13px; }
+.dec-price { display: flex; align-items: center; gap: 5px; }
+.dec-price label { font-size: 11px; color: #7a828c; white-space: nowrap; }
+.dec-price .input { width: 96px; height: 26px; font-size: 12px; }
+.dec-price .unit { font-size: 11px; color: #8d959f; }
+.dec-actions { margin-left: auto; display: flex; gap: 6px; }
+
+.dec-sum {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px;
+  padding: 9px 12px; border-bottom: 1px solid #eef0f3; font-size: 11.5px;
+}
+.dec-sum > div { display: flex; justify-content: space-between; }
+.dec-sum .k { color: #7a828c; }
+.dec-sum .v { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.dec-quality { padding: 8px 12px; font-size: 11.5px; border-bottom: 1px solid #eef0f3; }
+.qlist { margin: 5px 0 0 16px; padding: 0; color: #7a828c; line-height: 1.75; }
+
+.sec {
+  margin: 12px 12px 6px; font-size: 11.5px; font-weight: 600; color: #5d656f;
+  border: 0; padding: 0;
+}
+.dec-tbl { font-size: 11.5px; }
+.dec-tbl th { font-size: 10.5px; }
+.dec-tbl td { padding: 5px 6px; vertical-align: top; }
+.dec-tbl tr.off td { opacity: .38; }
+.dec-tbl .hint2 { font-size: 10.5px; color: #8d959f; margin-top: 1px; }
+.dec-tbl input[type=checkbox] { cursor: pointer; }
+
+.dec-result { padding: 10px 12px 14px; border-top: 1px solid #eef0f3; }
+.dec-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 3px 0; font-size: 12px;
+}
+.dec-row.hl { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 7px; }
+.dec-row.hl b { font-size: 15px; }
+.dec-row b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.dec-note {
+  margin-top: 7px; font-size: 11px; line-height: 1.75; color: #7a828c;
+  padding: 6px 9px; background: #fafbfc; border-left: 2px solid var(--line);
+}
+
