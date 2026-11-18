@@ -1339,7 +1339,7 @@ const SCENES = {
   decomp2:   { unit: 246, tab: 'decomp', prefs: { rt_metro_time: 0 } },   // 有车：不付地铁钱
   decomp3:   { unit: 246, tab: 'decomp',
                prefs: { rt_metro_time: 0, rt_shop_1km: -0.3 } },          // 有车 + 不喜欢商场
-  decomp4:   { unit: 246, tab: 'decomp', price: 125000 },                 // 议价：业主挂牌
+  decomp4:   { unit: 246, tab: 'decomp', price: 150000 },                 // 议价：业主挂牌
   pick:      { probe: true },
   hover:     { probe: true, quiet: true },
   zoom:      { zoom: 2.6 },
