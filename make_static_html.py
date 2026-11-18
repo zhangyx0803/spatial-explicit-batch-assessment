@@ -56,7 +56,42 @@ def build_payload(bundle: str) -> dict:
             except Exception:
                 continue
 
-    return {"boot": boot, "fields": fields,
+    # --- 预计算每个有成交单元的局部拆解 ---
+    print("  预计算价格拆解（%d 个单元）…" % len(ds.obs.unit_idx))
+    from seba.decompose import BUYER_HINT, decompose
+
+    decs = {}
+    feats = [c for c in (boot.get("result") or {}).get("features", []) if c in ds.attrs]
+    w = {c: 1.0 for c in feats}
+    t0 = __import__("time").time()
+    for n, i in enumerate(sorted(set(int(x) for x in ds.obs.unit_idx))):
+        try:
+            d = decompose(ds, w, i, radius=1500.0, min_n=120, n_boot=120)
+        except Exception:
+            continue
+        decs[str(i)] = {
+            "unit_id": d.unit_id,
+            "ask": round(d.asking_price),
+            "base": round(d.base_price),
+            "model": round(d.model_price),
+            "unexplained": round(d.unexplained),
+            "n": d.n_samples,
+            "radius": round(d.radius),
+            "r2": round(d.r2, 3),
+            "bad_sign": d.bad_sign,
+            "items": [{
+                "code": it.code, "name": it.name,
+                "hint": BUYER_HINT.get(it.code, ""),
+                "c": round(float(it.contribution)),
+                "lo": round(float(it.lo)), "hi": round(float(it.hi)),
+                "sig": not (it.lo <= 0 <= it.hi),
+            } for it in d.items],
+        }
+        if (n + 1) % 50 == 0:
+            print("    %d / %d …" % (n + 1, len(set(int(x) for x in ds.obs.unit_idx))))
+    print("  拆解完成，用时 %.0f 秒，共 %d 个" % (__import__("time").time() - t0, len(decs)))
+
+    return {"boot": boot, "fields": fields, "decomps": decs,
             "built": __import__("time").strftime("%Y-%m-%d %H:%M")}
 
 
@@ -125,6 +160,27 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 .pill.ok{background:#e3efe6;color:#2f6b46}
 .pill.bad{background:#f2e3e0;color:#8a3b2c}
 .detail-empty{color:#8d959f;font-size:12px;padding:14px 4px;text-align:center}
+.dec-sum{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11.5px;margin-bottom:8px}
+.dec-sum>div{display:flex;justify-content:space-between}
+.dec-sum .k{color:#7a828c}
+.dec-sum .v{font-family:Consolas,Monaco,monospace;font-variant-numeric:tabular-nums}
+.dec-q{font-size:11px;color:#7a828c;line-height:1.7;margin-bottom:8px;
+  padding:5px 8px;background:#fafbfc;border-left:2px solid #d7dade}
+.dec-tbl2{width:100%;border-collapse:collapse;font-size:11.5px}
+.dec-tbl2 td{padding:4px 3px;border-bottom:1px solid #f0f2f4;vertical-align:top}
+.dec-tbl2 .wc{width:62px;white-space:nowrap}
+.dec-tbl2 .wc input[type=range]{width:38px;vertical-align:middle;accent-color:#1f4e5f;cursor:pointer}
+.dec-tbl2 .wc b{font-size:10px;color:#8d959f;font-weight:400;font-family:Consolas,monospace}
+.dec-tbl2 .nm{color:#2b3138}
+.dec-tbl2 .h2{font-size:10px;color:#8d959f}
+.dec-tbl2 .cr{text-align:right;font-family:Consolas,Monaco,monospace;font-variant-numeric:tabular-nums}
+.dec-tbl2 .civ{font-size:9.5px;color:#9aa2ab;font-family:Consolas,Monaco,monospace}
+.dec-tbl2 tr.off td{opacity:.4}
+.dec-out{margin-top:9px;padding-top:8px;border-top:1px solid #e6e9ec;font-size:12px}
+.dec-out .row{display:flex;justify-content:space-between;padding:2px 0}
+.dec-out .row b{font-family:Consolas,Monaco,monospace}
+.dec-out .big{font-size:15px}
+.dec-out .note{font-size:10.5px;color:#7a828c;margin-top:5px;line-height:1.7}
 .note{font-size:11px;color:#7a828c;line-height:1.7;padding:6px 10px;border-left:2px solid #d7dade;
   background:#fafbfc;margin:0 8px 8px}
 </style>
@@ -189,6 +245,10 @@ table{width:100%;border-collapse:collapse;font-size:12px}
     <section class="card">
       <h2>精度指标</h2>
       <div class="pad"><table class="kv" id="metricTbl"></table></div>
+    </section>
+    <section class="card" id="decompCard" hidden>
+      <h2>价格拆解 <span class="muted small" style="font-weight:400">拖动滑杆按你的需求重算</span></h2>
+      <div class="pad" id="decompBody"></div>
     </section>
     <section class="card" id="detailCard" hidden>
       <h2>单元详情</h2>
@@ -466,6 +526,95 @@ function pick(ev){
   if(best<0 || bd>limit*limit) return;
   S.sel = best; draw(); showDetail(best);
 }
+const DECP = {};
+
+function showDecomp(k){
+  const d = (DATA.decomps || {})[String(k)];
+  const card = document.getElementById('decompCard');
+  const body = document.getElementById('decompBody');
+  if (!d) { card.hidden = true; return; }
+  card.hidden = false;
+  DECP.cur = d;
+  DECP.w = {};
+  d.items.forEach(it => { DECP.w[it.code] = 1; });
+
+  const issues = [];
+  if (d.n < 100) issues.push('样本仅 ' + d.n + ' 套');
+  if (d.r2 < 0.5) issues.push('局部 R² 仅 ' + d.r2.toFixed(2));
+  if (d.bad_sign && d.bad_sign.length) issues.push('部分系数方向异常');
+  if (Math.abs(d.unexplained) / (d.ask || 1) > 0.15) {
+    issues.push(Math.round(Math.abs(d.unexplained) / d.ask * 100) + '% 价格未被解释');
+  }
+  const lvl = issues.length === 0 ? '高' : (issues.length === 1 ? '中' : '低');
+  const cls = issues.length === 0 ? 'ok' : (issues.length === 1 ? 'mid' : 'bad');
+
+  let html = '<div class="dec-sum">'
+    + '<div><span class="k">局部基准价</span><span class="v">' + NF.format(d.base) + '</span></div>'
+    + '<div><span class="k">因素加总</span><span class="v">' + NF.format(d.model) + '</span></div>'
+    + '<div><span class="k">未解释</span><span class="v">' + (d.unexplained>=0?'+':'') + NF.format(d.unexplained) + '</span></div>'
+    + '<div><span class="k">样本</span><span class="v">' + d.n + ' 套 / ' + Math.round(d.radius) + 'm</span></div>'
+    + '</div>';
+  html += '<div class="dec-q"><span class="pill ' + cls + '">拆解可信度 ' + lvl + '</span>'
+    + (issues.length ? '　' + issues.join('；') : '') + '</div>';
+
+  html += '<table class="dec-tbl2">';
+  for (const it of d.items) {
+    const w = 100;
+    html += '<tr data-code="' + it.code + '">'
+      + '<td class="wc"><input type="range" min="0" max="100" step="10" value="' + w + '" data-c="' + it.code + '"><b>' + w + '%</b></td>'
+      + '<td class="nm">' + it.name + (it.hint ? '<div class="h2">' + it.hint + '</div>' : '') + '</td>'
+      + '<td class="cr">' + (it.c >= 0 ? '+' : '') + NF.format(it.c)
+      + '<div class="civ">' + NF.format(it.lo) + '~' + NF.format(it.hi) + (it.sig ? '' : '?') + '</div></td>'
+      + '</tr>';
+  }
+  html += '</table>';
+  html += '<div class="dec-out" id="decOut"></div>';
+  body.innerHTML = html;
+
+  body.querySelectorAll('input[data-c]').forEach(sl => {
+    sl.oninput = () => {
+      const v = parseInt(sl.value, 10) / 100;
+      DECP.w[sl.dataset.c] = v;
+      sl.parentNode.querySelector('b').textContent = Math.round(v * 100) + '%';
+      sl.closest('tr').classList.toggle('off', v === 0);
+      renderDecOut();
+    };
+  });
+  renderDecOut();
+}
+
+function renderDecOut(){
+  const d = DECP.cur;
+  if (!d) return;
+  let adapted = d.base;
+  const list = [];
+  let anyOff = false;
+  for (const it of d.items) {
+    const w = DECP.w[it.code] == null ? 1 : DECP.w[it.code];
+    adapted += w * it.c;
+    if (w < 1) {
+      anyOff = true;
+      if (it.c > 0) list.push({ name: it.name, cut: (1 - w) * it.c });
+    }
+  }
+  if (!anyOff) adapted = d.model;
+  const diff = d.model - adapted;
+  const area = 90;
+  let h = '<div class="row"><span>市场合理价</span><b>' + NF.format(d.model) + ' 元/㎡</b></div>';
+  h += '<div class="row"><span>对你而言的适配价</span><b class="big">' + NF.format(Math.round(adapted)) + ' 元/㎡</b></div>';
+  if (anyOff) {
+    h += '<div class="row"><span>' + (diff > 0 ? '你为不需要的东西多付' : '你占到的便宜') + '</span>'
+      + '<b style="color:' + (diff > 0 ? '#8a3b2c' : '#2f6b46') + '">' + NF.format(Math.round(Math.abs(diff))) + ' 元/㎡</b></div>';
+    h += '<div class="note">按 ' + area + ' ㎡ 折算：市场 ' + NF.format(Math.round(d.model * area))
+      + ' 元 → 适配 ' + NF.format(Math.round(adapted * area)) + ' 元（差 '
+      + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
+    if (list.length) h += '<div class="note">冤枉钱：' + list.map(x => x.name + ' ' + NF.format(Math.round(x.cut))).join('、') + ' 元/㎡</div>';
+  } else {
+    h += '<div class="note">把用不上的因素拉低（比如有车不需要地铁拉到 0%），看适配价能降多少。</div>';
+  }
+  document.getElementById('decOut').innerHTML = h;
+}
+
 function showDetail(k){
   const card=document.getElementById('detailCard'), body=document.getElementById('detailBody');
   card.hidden=false;
@@ -485,6 +634,7 @@ function showDetail(k){
   html += '<table class="tbl">'+Object.entries(F).filter(([c])=>!['est_median','est_mean','p_low','p_high','resid'].includes(c))
     .map(([c,v])=>`<tr><td>${v.name}</td><td class="num">${Number(v.values[k]).toFixed(3)}</td></tr>`).join('')+'</table>';
   body.innerHTML = html;
+  showDecomp(k);
 }
 
 document.getElementById('geomSeg').querySelectorAll('.segbtn').forEach(b=>{
@@ -496,6 +646,15 @@ document.getElementById('geomSeg').querySelectorAll('.segbtn').forEach(b=>{
 cv.addEventListener('click', pick);
 window.addEventListener('resize', draw);
 build(); draw();
+
+/* 支持 #unit=<序号> 直接打开某单元（含价格拆解） */
+(function () {
+  const m = (location.hash || '').match(/^#unit=(\d+)/);
+  if (!m) return;
+  const k = parseInt(m[1], 10);
+  if (!(k >= 0 && k < U.x.length)) return;
+  setTimeout(() => { S.sel = k; draw(); showDetail(k); }, 300);
+})();
 </script>
 </body>
 </html>

@@ -788,3 +788,20 @@ select.input { cursor: pointer; }
   padding: 6px 9px; background: #fafbfc; border-left: 2px solid var(--line);
 }
 
+
+/* 价格拆解：权重滑杆 */
+.dec-tbl .wcell { white-space: nowrap; }
+.dec-tbl .wcell input[type=range] {
+  width: 46px; vertical-align: middle; accent-color: var(--accent); cursor: pointer;
+}
+.dec-tbl .wcell b {
+  display: inline-block; width: 30px; text-align: right;
+  font-size: 10.5px; font-family: var(--mono); color: #7a828c; font-weight: 400;
+}
+
+/* 价格拆解表：三列紧凑排布 */
+.dec-tbl .wcell input[type=range] { width: 40px; }
+.dec-tbl .wcell b { width: 26px; font-size: 10px; }
+.dec-tbl td.r { line-height: 1.35; }
+.dec-tbl .civ { font-size: 10px; color: #9aa2ab; font-family: var(--mono); }
+.dec-tbl .civ.ns { color: #b8bec6; }

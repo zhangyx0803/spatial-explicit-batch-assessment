@@ -1087,6 +1087,7 @@ const GEOM_HINT = {
    右栏：价格拆解 + 个性化适配
    ========================================================================= */
 const DEC = { data: null, pref: {}, idx: null };
+const pint = (v) => NF.format(Math.round(v || 0));
 
 async function showDecomp(idx) {
   if (idx == null) return;
@@ -1150,19 +1151,24 @@ function renderDecomp() {
   $('dcTbl').querySelector('tbody').innerHTML = d.items.map(it => {
     const c = it.contribution;
     const cc = c > 1 ? 'ok' : (c < -1 ? 'bad' : 'muted');
-    const off = DEC.pref[it.code] === 0 ? ' class="off"' : '';
+    const w = Math.round((DEC.pref[it.code] == null ? 1 : DEC.pref[it.code]) * 100);
+    const off = w === 0 ? ' class="off"' : '';
     return '<tr' + off + '>'
-      + '<td><input type="checkbox" data-dec="' + it.code + '"' + (DEC.pref[it.code] ? ' checked' : '') + '></td>'
+      + '<td class="wcell"><input type="range" min="0" max="100" step="10" value="' + w
+      + '" data-dec="' + it.code + '"><b>' + w + '%</b></td>'
       + '<td class="txt">' + it.name + (it.hint ? '<div class="hint2">' + it.hint + '</div>' : '') + '</td>'
-      + '<td class="r ' + cc + '">' + (c >= 0 ? '+' : '') + price(c) + '</td>'
-      + '<td class="r muted small">' + price(it.lo) + ' ~ ' + price(it.hi) + (it.significant ? '' : ' ?') + '</td>'
+      + '<td class="r"><div class="' + cc + '">' + (c >= 0 ? '+' : '') + pint(c) + '</div>'
+      + '<div class="civ ' + (it.significant ? '' : 'ns') + '">'
+      + pint(it.lo) + '~' + pint(it.hi) + (it.significant ? '' : '?') + '</div></td>'
       + '</tr>';
   }).join('');
 
-  $('dcTbl').querySelectorAll('input[data-dec]').forEach(cb => {
-    cb.onchange = () => {
-      DEC.pref[cb.dataset.dec] = cb.checked ? 1 : 0;
-      cb.closest('tr').classList.toggle('off', !cb.checked);
+  $('dcTbl').querySelectorAll('input[data-dec]').forEach(sl => {
+    sl.oninput = () => {
+      const v = parseInt(sl.value, 10) / 100;
+      DEC.pref[sl.dataset.dec] = v;
+      sl.parentNode.querySelector('b').textContent = Math.round(v * 100) + '%';
+      sl.closest('tr').classList.toggle('off', v === 0);
       renderDecResult();
     };
   });
@@ -1176,12 +1182,14 @@ function renderDecResult() {
   let adapted = d.base_price;
   const list = [];
   for (const it of d.items) {
-    const w = DEC.pref[it.code] === 0 ? 0 : 1;
+    const w = DEC.pref[it.code] == null ? 1 : DEC.pref[it.code];
     adapted += w * it.contribution;
-    if (!w && it.contribution > 0) list.push(it);
+    if (w < 1 && it.contribution > 0) {
+      list.push({ name: it.name, cut: (1 - w) * it.contribution });
+    }
   }
   const area = 90;
-  const anyOff = d.items.some(it => DEC.pref[it.code] === 0);
+  const anyOff = d.items.some(it => (DEC.pref[it.code] == null ? 1 : DEC.pref[it.code]) < 1);
   // 全部勾选时，适配价严格等于市场价（避免逐项取整产生的 1-2 元误差）
   if (!anyOff) adapted = d.model_price;
   const diff = d.model_price - adapted;
@@ -1197,10 +1205,10 @@ function renderDecResult() {
       + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
     if (list.length) {
       html += '<div class="dec-note">冤枉钱：'
-        + list.map(it => it.name + ' ' + price(it.contribution) + ' 元/㎡').join('、') + '</div>';
+        + list.map(it => it.name + ' ' + price(it.cut) + ' 元/㎡').join('、') + '</div>';
     }
   } else {
-    html += '<div class="dec-note muted">勾掉你用不上的因素（比如有车不需要地铁），看适配价能降多少。</div>';
+    html += '<div class="dec-note muted">把用不上的因素拉低（比如有车不需要地铁拉到 0%），看适配价能降多少。</div>';
   }
   $('dcResult').innerHTML = html;
 }
