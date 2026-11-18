@@ -251,7 +251,7 @@ def _lattice_shapefile(bbox, step_m: float = 0.0):
                      prj='GEOGCS["WGS 84"]', n=n)
 
 
-def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0):
+def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0):
     """读路网、裁剪、拓扑清洗、取最大连通分量。"""
     if not P_ROADS or not os.path.exists(P_ROADS):
         sf = _lattice_shapefile(bbox)
@@ -263,7 +263,10 @@ def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0):
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     x0, y0, x1, y1 = bbox
-    pad = 15000.0  # 研究区外扩 15 km：必须把 CBD 等目的地包进来，否则算的不是"到 CBD"
+    # 研究区外扩：必须把 CBD 等目的地包进来，否则远郊区算出来的不是“到 CBD 时间”。
+    # 默认 15 km；若城市中心在 15 km 之外（奉贤/金山/崇明等），按需扩展。
+    if pad <= 0:
+        pad = 15000.0  # 研究区外扩 15 km：必须把 CBD 等目的地包进来，否则算的不是"到 CBD"
 
     segs = []
     cls = []
@@ -744,7 +747,17 @@ def build_district_dataset(
     x1, y1 = float(cx.max()), float(cy.max())
     rep.bbox_m = (x0, y0, x1, y1)
 
-    graph, keep, segs, cls = _load_roads((x0, y0, x1, y1), rep)
+    # 自适应裁剪范围：把城市中心包进路网，否则远郊区的可达性因子会失真
+    _cbd_lon, _cbd_lat = SOURCE["cbd"][0], SOURCE["cbd"][1]
+    _kx = 111320.0 * math.cos(math.radians(lat0))
+    _ky = 110540.0
+    _cx = (_cbd_lon - lon0) * _kx
+    _cy = (_cbd_lat - lat0) * _ky
+    _dx = max(0.0, x0 - _cx, _cx - x1)
+    _dy = max(0.0, y0 - _cy, _cy - y1)
+    _need = math.hypot(_dx, _dy) + 5000.0
+    _pad = max(15000.0, min(90000.0, _need))
+    graph, keep, segs, cls = _load_roads((x0, y0, x1, y1), rep, pad=_pad)
 
     # 校验：CBD 必须落在路网范围内，否则可达性因子没有意义
     cbd_pt = np.array([[(SOURCE["cbd"][0] - lon0) * 111320.0 * math.cos(math.radians(lat0)),
