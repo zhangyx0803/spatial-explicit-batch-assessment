@@ -34,3 +34,5 @@ cache_schools.npz
 dist/
 build/
 *.spec
+
+pip-*
