@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 BASE_FIELDS = [
     ("est_median", "估值单价（中位口径）", "money", False),
+    ("obs_price", "实际成交单价", "money", False),
     ("est_mean", "估值单价（均值口径）", "money", False),
     ("p_low", "区间下限 P10", "money", False),
     ("p_high", "区间上限 P90", "money", False),

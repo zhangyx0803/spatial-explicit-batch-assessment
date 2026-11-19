@@ -141,6 +141,7 @@ function fieldPayload() {
   switch (S.field) {
     case 'est': return { v: a.est_median, unit: '元/m²', div: false, price: true, title: '估值单价（中位口径）' };
     case 'est_cal': return { v: a.est_cal || a.est_median, unit: '元/m²', div: false, price: true, title: '校准后估值（按街道偏差修正）' };
+    case 'actual': return { v: a.obs_price || [], unit: '元/m²', div: false, price: true, title: '实际成交单价（仅有成交的单元）' };
     case 'grade': return { v: (S.result.grades || []).map(g => g === 'ok' ? 1 : (g === 'warn' ? 0.5 : 0)), unit: '', div: false, title: '估值可信度（1=可直接用 0.5=建议复核 0=需人工）' };
     case 'mean': return { v: a.est_mean, unit: '元/m²', div: false, price: true, title: '估值单价（均值口径）' };
     case 'resid': return { v: a.resid, unit: '', div: true, title: '残差' };
@@ -552,6 +553,7 @@ function renderFieldSelect() {
   const sel = $('fieldSel');
   const out = [
     ['est', '估值单价（中位口径）'],
+    ['actual', '实际成交单价'],
     ['est_cal', '校准后估值'],
     ['grade', '估值可信度'],
     ['mean', '估值单价（均值口径）'],
@@ -1107,8 +1109,16 @@ $('map').addEventListener('mousemove', (ev) => {
     showTip(ev, `${nm} · 非住宅用地，不估值`);
     return;
   }
-  showTip(ev, (v === null || v === undefined) ? `${nm} · 无成交`
-    : (p.price ? `${nm} · ${price(v)} 元/㎡` : `${nm} · ${brief(v)}`));
+  const _a = (S.result && S.result.arrays) || {};
+  const op = (_a.obs_price || [])[k];
+  const est = (_a.est_median || [])[k];
+  if (op !== null && op !== undefined) {
+    showTip(ev, `${nm} ｜ 成交 ${price(op)} 元/㎡`
+      + (est !== null && est !== undefined ? ` ｜ 估值 ${price(est)}` : ''));
+    return;
+  }
+  showTip(ev, (est === null || est === undefined) ? `${nm} ｜ 无成交`
+    : `${nm} ｜ 估值 ${price(est)} 元/㎡`);
 });
 $('map').addEventListener('mouseleave', () => { $('tip').hidden = true; });
 $('map').addEventListener('click', (ev) => {
@@ -1370,6 +1380,7 @@ const SCENES = {
   hover:     { probe: true, quiet: true },
   parkunit:  { unitName: '大宁灵石公园', tab: 'unit' },
   parkhover: { hoverUnit: '大宁灵石公园' },
+  resthover: { hoverUnit: '大宁路505弄居委' },
   zoom:      { zoom: 2.6 },
   diag:      { tab: 'diag' },                                 // 空间诊断
   factor:    { tab: 'factor' },                               // 因子设置

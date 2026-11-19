@@ -256,6 +256,10 @@ class AppState:
         resid_unit = np.full(self.ds.n_units, np.nan)
         resid_unit[obs.unit_idx] = bundle.resid_log
 
+        # 实际成交单价（无成交单元为 NaN），用于地图与悬停展示
+        obs_price_unit = np.full(self.ds.n_units, np.nan)
+        obs_price_unit[obs.unit_idx] = np.asarray(obs.unit_price, dtype=float)
+
         names = {c: factor_name(c, self.cfg.factor(c).note) for c in feats}
         res = {
             "features": feats,
@@ -288,6 +292,7 @@ class AppState:
                 "p_mid": _num(mid, 1),
                 "p_high": _num(hi, 1),
                 "resid": _num(resid_unit, 4),
+                "obs_price": _num(obs_price_unit, 1),
             },
         }
         self._cache[key] = res
