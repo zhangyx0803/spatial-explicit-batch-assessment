@@ -824,8 +824,13 @@ def build_district_dataset(
     # ---- 学区：学校点位（面要素质心）+ 官方招生规模 ----
     sch = None
     try:
-        tbl = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                           "config", "school_jingan.csv")
+        _cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config")
+        _cands = []
+        if district:
+            _cands.append(os.path.join(_cfg, "catchment", "%s.csv" % district))
+        _cands.append(os.path.join(_cfg, "catchment", "全市.csv"))
+        _cands.append(os.path.join(_cfg, "school_jingan.csv"))
+        tbl = next((p for p in _cands if os.path.exists(p)), "")
         sch = load_schools(tbl if os.path.exists(tbl) else "")
         sx = (sch["x"] - lon0) * kx0
         sy = (sch["y"] - lat0) * ky0
@@ -864,10 +869,17 @@ def build_district_dataset(
             sch_class = np.where(hit_c, cls_c, sch_class)
             sch_group = np.where(hit_c, grp_c, sch_group)
             sch_catch = hit_c.astype(float)
+            # 未匹配单元用已匹配单元的中位数填充，避免整列 NaN；
+            # 是否匹配本身由 sch_catchment 因子单独表达
+            _m = np.isfinite(sch_class)
+            if _m.any():
+                sch_class = np.where(_m, sch_class, float(np.nanmedian(sch_class[_m])))
+            sch_class = np.nan_to_num(sch_class, nan=0.0)
             rep.notes.append("学区：%d/%d 个单元匹配到对口小学（覆盖率 %.0f%%）"
                              % (int(hit_c.sum()), len(hit_c), hit_c.mean() * 100))
         else:
             sch_catch = np.zeros(len(ids))
+            sch_class = np.zeros(len(ids))
     else:
         sch_catch = np.zeros(len(ids))
 
