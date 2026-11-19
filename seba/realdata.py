@@ -655,6 +655,55 @@ def _norm_jw(t: str) -> str:
     return t.replace(" ", "")
 
 
+def _load_community_lonlat():
+    """读取已地理编码的小区（lon/lat），按区县分组；无文件则返回 {}。"""
+    import csv as _csv
+
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                        "data", "external", "community_xy.csv")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path, encoding="utf-8-sig") as fh:
+        for r in _csv.DictReader(fh):
+            try:
+                lon = float(r["经度"])
+                lat = float(r["纬度"])
+                pri = float(r["挂牌单价"])
+            except (KeyError, ValueError):
+                continue
+            if not (120.8 < lon < 122.2 and 30.6 < lat < 31.9):
+                continue
+            if not (3000 < pri < 400000):
+                continue
+            out.setdefault((r.get("区县") or "").strip(), []).append((lon, lat, pri))
+    return out
+
+
+def _load_real_unit_prices(district: str, cx, cy, lat0: float, lon0: float,
+                           radius: float = 800.0):
+    """把小区按本区投影基准换算后匹配到评估单元，返回每单元的中位价（无则 NaN）。
+
+    必须用与评估单元相同的 lat0/lon0，否则跨区偏移会造成漏配。
+    """
+    pool = _load_community_lonlat().get(district or "", [])
+    n = len(cx)
+    out = np.full(n, np.nan)
+    if len(pool) < 20:
+        return out
+    kx = 111320.0 * math.cos(math.radians(lat0))
+    ky = 110540.0
+    px = np.array([(lon - lon0) * kx for lon, lat, pri in pool])
+    py = np.array([(lat - lat0) * ky for lon, lat, pri in pool])
+    pv = np.array([pri for lon, lat, pri in pool])
+    r2 = radius * radius
+    for i in range(n):
+        m = (px - cx[i]) ** 2 + (py - cy[i]) ** 2 <= r2
+        if m.any():
+            out[i] = float(np.median(pv[m]))
+    return out
+
+
 def build_catchment(table_path: str):
     """从官方对口表构建「居委短名 → (学校名, 班级数, 是否集团化)」。"""
     import csv as _csv
@@ -1085,7 +1134,20 @@ def build_district_dataset(
     # 水平校准：让合成价格的均值正好等于区级官方均价（对数正态会自带系统性上移）
     price_pm2 *= base / price_pm2.mean()
 
-    has = rng.random(len(ids)) < obs_share
+    # ---- 若已具备小区级真实挂牌价，优先用真实价 ----
+    real_arr = _load_real_unit_prices(district, cx, cy, lat0, lon0)
+    real_cov = float(np.isfinite(real_arr).mean()) if len(ids) else 0.0
+    if real_cov >= 0.30:
+        price_pm2 = np.where(np.isfinite(real_arr), real_arr, price_pm2)
+        has = np.isfinite(real_arr)
+        _src = "小区级挂牌价（高德地理编码 + 公开数据集）"
+        rep.notes.append("价格：%d/%d 个单元使用真实小区挂牌价（覆盖率 %.0f%%）"
+                         % (int(np.isfinite(real_arr).sum()), len(ids), real_cov * 100))
+    else:
+        has = rng.random(len(ids)) < obs_share
+        _src = "合成（水平锚定区级均价）"
+        rep.notes.append("价格：真实小区价覆盖率仅 %.0f%%，本区仍用合成价格"
+                         % (real_cov * 100))
     idx = np.nonzero(has)[0]
     obs = ObsTable(
         unit_idx=idx,
@@ -1093,7 +1155,7 @@ def build_district_dataset(
         unit_price=price_pm2[idx],
         deal_date=np.array(["2024-06-15"] * idx.size),
         price_type=np.array(["listing"] * idx.size),
-        source=np.array(["合成（水平锚定区级均价）"] * idx.size),
+        source=np.array([_src] * idx.size),
         weight=np.ones(idx.size),
     )
 
