@@ -383,6 +383,10 @@ class AppState:
                 "admin": u.admin_code.tolist(),
                 "name": [str(x) for x in (
                     getattr(u, "name", None) if getattr(u, "name", None) is not None else u.unit_id)],
+                "use_type": [str(x) for x in (
+                    getattr(u, "use_type", None)
+                    if getattr(u, "use_type", None) is not None
+                    else ["住宅"] * self.ds.n_units)],
                 "area": _num(u.area, 0),
             },
             "has_obs": [bool(v) for v in np.isin(np.arange(self.ds.n_units), self.ds.obs.unit_idx)],
@@ -466,6 +470,7 @@ class AppState:
             "x": float(u.x[idx]), "y": float(u.y[idx]),
             "admin": str(u.admin_code[idx]),
             "unit_name": (str(u.name[idx]) if getattr(u, "name", None) is not None else ""),
+            "use_type": (str(u.use_type[idx]) if getattr(u, "use_type", None) is not None else "住宅"),
             "area": float(u.area[idx]),
             "population": float(u.population[idx]),
             "est_median": a["est_median"][idx],

@@ -681,6 +681,18 @@ async function showUnit(idx) {
 
     const gTxt = { ok: '可直接用', warn: '建议复核', bad: '需人工核', unknown: '—' }[u.grade] || '—';
     const gCls = { ok: 'ok', warn: 'mid', bad: 'bad' }[u.grade] || 'mid';
+    const nonres = u.use_type && u.use_type !== '住宅';
+    if (nonres) {
+      $('uMetrics').innerHTML = `<div class="mrow" style="grid-column:span 2">
+        <span class="k">单元用途</span><span class="v mid" style="font-size:11px">${u.use_type}</span></div>
+        <div class="mrow" style="grid-column:span 2">
+        <span class="k" style="color:#8d959f">该单元为公园、商业、学校或办公等非住宅用地，
+        不参与估值与精度统计</span></div>`;
+      $('uFactorTbl').querySelector('tbody').innerHTML = u.factors.map(f => `
+        <tr><td class="txt">${f.name}</td><td class="r">${brief(f.value)}</td>
+        <td class="r ${f.selected ? 'sig' : 'ns'}">${f.selected ? '✓' : ''}</td></tr>`).join('');
+      return;
+    }
     const items = [
       ['估值单价（中位）', price(u.est_median) + ' 元/㎡', 'mid'],
       ['校准后估值', u.est_cal != null ? price(u.est_cal) + ' 元/㎡' : '—', 'mid'],
@@ -1090,6 +1102,11 @@ $('map').addEventListener('mousemove', (ev) => {
   const p = fieldPayload();
   const v = (p.v || [])[k];
   const nm = (S.boot.units.name && S.boot.units.name[k]) || S.boot.units.id[k];
+  const ut = (S.boot.units.use_type || [])[k];
+  if (ut && ut !== '住宅') {
+    showTip(ev, `${nm} · 非住宅用地，不估值`);
+    return;
+  }
   showTip(ev, (v === null || v === undefined) ? `${nm} · 无成交`
     : (p.price ? `${nm} · ${price(v)} 元/㎡` : `${nm} · ${brief(v)}`));
 });
@@ -1351,6 +1368,7 @@ const SCENES = {
   decomp4:   { unit: 246, tab: 'decomp', price: 150000 },                 // 议价：业主挂牌
   pick:      { probe: true },
   hover:     { probe: true, quiet: true },
+  parkunit:  { unitName: '大宁灵石公园', tab: 'unit' },
   zoom:      { zoom: 2.6 },
   diag:      { tab: 'diag' },                                 // 空间诊断
   factor:    { tab: 'factor' },                               // 因子设置
@@ -1380,6 +1398,10 @@ function runScene() {
     if (sc.field) {
       const sel = $('fieldSel');
       if (sel) { sel.value = sc.field; sel.onchange && sel.onchange(); }
+    }
+    if (sc.unitName) {
+      const _i = (S.boot.units.name || []).indexOf(sc.unitName);
+      if (_i >= 0) sc.unit = _i;
     }
     if (sc.unit != null) {
       S.unitIdx = sc.unit;
