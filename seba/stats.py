@@ -360,3 +360,72 @@ def fit_and_evaluate(
         train_metrics=train,
         oof_log=oof_spat,
     )
+
+# --------------------------------------------------------------------------
+# 分区校准：按街道估计估值偏差，并用经验贝叶斯向 0 收缩
+# --------------------------------------------------------------------------
+
+@dataclass
+class Calibration:
+    """分组（街道）偏差估计结果。"""
+
+    groups: Dict[str, Dict[str, float]]
+    k: float
+    global_mean: float
+
+    def bias_of(self, name: str, default: float = 0.0) -> float:
+        g = self.groups.get(str(name))
+        return float(g["bias"]) if g else default
+
+    def grade_of(self, name: str) -> str:
+        g = self.groups.get(str(name))
+        if not g:
+            return "unknown"
+        n, b = float(g["n"]), abs(float(g["bias"]))
+        if n >= 12 and b <= 0.08 + 1e-9:
+            return "ok"
+        if n >= 6 and b <= 0.20 + 1e-9:
+            return "warn"
+        return "bad"
+
+    def table(self) -> List[Dict]:
+        out = []
+        for name, g in sorted(self.groups.items(), key=lambda kv: -abs(kv[1]["bias"])):
+            out.append({
+                "name": name,
+                "n": int(g["n"]),
+                "raw": round(float(g["raw"]), 4),
+                "bias": round(float(g["bias"]), 4),
+                "sd": round(float(g["sd"]), 4),
+                "grade": self.grade_of(name),
+            })
+        return out
+
+
+def calibrate_block(groups, resid_log, k: float = 5.0) -> Calibration:
+    """按分组估计对数残差均值，收缩后作为该组的估值校准量。
+
+    收缩公式 bias = mean × n / (n + k)：样本少的组自动向 0 靠拢，
+    避免仅凭两三条成交就大幅修正整条街道。
+    """
+    g = np.asarray(groups).astype(str)
+    r = np.asarray(resid_log, dtype=float)
+    ok = np.isfinite(r)
+    out: Dict[str, Dict[str, float]] = {}
+    if not ok.any():
+        return Calibration(groups={}, k=float(k), global_mean=0.0)
+    for name in np.unique(g[ok]):
+        vals = r[ok & (g == name)]
+        n = int(vals.size)
+        if n == 0:
+            continue
+        mean = float(vals.mean())
+        sd = float(vals.std(ddof=1)) if n > 1 else 0.0
+        out[str(name)] = {
+            "n": float(n),
+            "raw": mean,
+            "bias": mean * n / (n + k),
+            "sd": sd,
+        }
+    gm = float(r[ok].mean())
+    return Calibration(groups=out, k=float(k), global_mean=gm)

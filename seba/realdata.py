@@ -27,7 +27,24 @@ from .vec import read_vector
 __all__ = ["RealDataError", "DATA_ROOT", "DISTRICT_PRICE",
            "list_districts", "build_district_dataset"]
 
-DATA_ROOT = r"F:\上海师大\各种地理数据"
+def _resolve_data_root() -> str:
+    """数据根目录：环境变量 > 本地镜像 > 原始位置。
+
+    本地镜像用于摆脱移动硬盘依赖——把用到的几份数据按相同相对路径
+    拷到本地盘即可，代码无需改动。
+    """
+    cands = [
+        os.environ.get("SEBA_DATA_ROOT"),
+        r"D:\SEBA_数据",
+        r"F:\上海师大\各种地理数据",
+    ]
+    for c in cands:
+        if c and os.path.isdir(c):
+            return c
+    return cands[-1]
+
+
+DATA_ROOT = _resolve_data_root()
 
 # 默认数据源（上海）。其他城市只需在同目录放一份 datasource.json 覆盖下面几项，
 # 或在程序里调用 configure()。字段名同样可配，因为不同城市的 shapefile 列名不一致。

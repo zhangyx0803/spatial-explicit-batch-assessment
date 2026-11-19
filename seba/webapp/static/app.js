@@ -140,6 +140,8 @@ function fieldPayload() {
   const a = S.result.arrays;
   switch (S.field) {
     case 'est': return { v: a.est_median, unit: '元/m²', div: false, price: true, title: '估值单价（中位口径）' };
+    case 'est_cal': return { v: a.est_cal || a.est_median, unit: '元/m²', div: false, price: true, title: '校准后估值（按街道偏差修正）' };
+    case 'grade': return { v: (S.result.grades || []).map(g => g === 'ok' ? 1 : (g === 'warn' ? 0.5 : 0)), unit: '', div: false, title: '估值可信度（1=可直接用 0.5=建议复核 0=需人工）' };
     case 'mean': return { v: a.est_mean, unit: '元/m²', div: false, price: true, title: '估值单价（均值口径）' };
     case 'resid': return { v: a.resid, unit: '', div: true, title: '残差' };
     case 'width': {
@@ -550,6 +552,8 @@ function renderFieldSelect() {
   const sel = $('fieldSel');
   const out = [
     ['est', '估值单价（中位口径）'],
+    ['est_cal', '校准后估值'],
+    ['grade', '估值可信度'],
     ['mean', '估值单价（均值口径）'],
     ['width', '预测区间宽度'],
     ['resid', '残差（高估/低估）'],
@@ -639,6 +643,7 @@ function renderVif() {
 }
 
 function renderDiag() {
+  renderCalib();
   const mo = S.result.moran;
   const bad = mo.p < 0.05 && mo.i > mo.e;
   $('moranCard').innerHTML = `
@@ -674,8 +679,12 @@ async function showUnit(idx) {
     $('uId').textContent = u.unit_name || u.unit_id;
     $('uAdmin').textContent = `${u.admin} · ${u.unit_id} · ${num(u.area, 0)} ㎡`;
 
+    const gTxt = { ok: '可直接用', warn: '建议复核', bad: '需人工核', unknown: '—' }[u.grade] || '—';
+    const gCls = { ok: 'ok', warn: 'mid', bad: 'bad' }[u.grade] || 'mid';
     const items = [
       ['估值单价（中位）', price(u.est_median) + ' 元/㎡', 'mid'],
+      ['校准后估值', u.est_cal != null ? price(u.est_cal) + ' 元/㎡' : '—', 'mid'],
+      ['本单元可信度', gTxt, gCls],
       ['估值单价（均值）', price(u.est_mean) + ' 元/㎡', 'mid'],
       ['价格下限 P10', price(u.p_low) + ' 元/㎡', 'mid'],
       ['价格上限 P90', price(u.p_high) + ' 元/㎡', 'mid'],
@@ -1551,3 +1560,23 @@ $('btnDistrict') && ($('btnDistrict').onclick = async () => {
   const r = await getJSON('/api/districts');
   showPicker(r.districts || [], r.current);
 });
+
+function renderCalib() {
+  const tb = document.querySelector('#calibTbl tbody');
+  if (!tb) return;
+  const cal = (S.result && S.result.calibration) || null;
+  if (!cal || !cal.groups || !cal.groups.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="muted">暂无校准数据</td></tr>';
+    return;
+  }
+  const tag = { ok: ['可直接用', 'ok'], warn: ['建议复核', 'mid'], bad: ['需人工核', 'bad'] };
+  tb.innerHTML = cal.groups.slice(0, 20).map(g => {
+    const t = tag[g.grade] || ['—', 'mid'];
+    const pct = (v) => (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+    return '<tr><td class="txt">' + g.name + '</td>'
+      + '<td class="r">' + g.n + '</td>'
+      + '<td class="r">' + pct(g.raw) + '</td>'
+      + '<td class="r">' + pct(g.bias) + '</td>'
+      + '<td class="r ' + t[1] + '">' + t[0] + '</td></tr>';
+  }).join('');
+}

@@ -228,6 +228,18 @@ class AppState:
             threshold=float((self.cfg.diagnosis or {}).get("district_t_threshold", 1.5)),
         )
 
+        # ---- 分区校准：按街道估偏差，收缩后修正估值 ----
+        from ..stats import calibrate_block
+
+        calib = calibrate_block(
+            self.ds.units.admin_code[obs.unit_idx], bundle.resid_log,
+            k=float((self.cfg.diagnosis or {}).get("calib_shrink_k", 5.0)),
+        )
+        bias_unit = np.array([calib.bias_of(a) for a in self.ds.units.admin_code],
+                             dtype=float)
+        est_cal = np.exp(pred_log + bias_unit)
+        grade_unit = [calib.grade_of(a) for a in self.ds.units.admin_code]
+
         resid_unit = np.full(self.ds.n_units, np.nan)
         resid_unit[obs.unit_idx] = bundle.resid_log
 
@@ -249,8 +261,15 @@ class AppState:
                 "p": moran.p, "n_perm": moran.n_perm, "verdict": moran.verdict(),
             },
             "districts": [{"code": d[0], "mean": d[1], "n": d[2], "tag": d[3]} for d in districts],
+            "calibration": {
+                "k": calib.k,
+                "global_mean": round(calib.global_mean, 4),
+                "groups": calib.table(),
+            },
+            "grades": grade_unit,
             "arrays": {
                 "est_median": _num(est_median, 1),
+                "est_cal": _num(est_cal, 1),
                 "est_mean": _num(est_mean, 1),
                 "p_low": _num(lo, 1),
                 "p_mid": _num(mid, 1),
@@ -437,6 +456,8 @@ class AppState:
             "area": float(u.area[idx]),
             "population": float(u.population[idx]),
             "est_median": a["est_median"][idx],
+            "est_cal": a.get("est_cal", a["est_median"])[idx],
+            "grade": (self.result.get("grades") or ["unknown"] * self.ds.n_units)[idx],
             "est_mean": a["est_mean"][idx],
             "p_low": a["p_low"][idx],
             "p_high": a["p_high"][idx],
@@ -806,11 +827,15 @@ class AppState:
         })
 
         resid_all = np.array([np.nan if v is None else v for v in arrs["resid"]])
+        _bm = getattr(ds, "basemap", {}) or {}
         png = residual_map_png(
             os.path.join(out_dir, "残差专题图.png"),
-            resid_all[obs.unit_idx],
-            ds.units.x[obs.unit_idx], ds.units.y[obs.unit_idx],
+            resid_all,
+            ds.units.x, ds.units.y,
             ds.grid.cell,
+            polys=_bm.get("unit_polys"),
+            roads=_bm.get("roads"),
+            water=_bm.get("water"),
         )
 
         factor_rows = [[c, stats[c]["op_name"], (stats[c]["note"] or "")[:24],

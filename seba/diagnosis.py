@@ -163,50 +163,106 @@ def residual_map_png(
     ys: np.ndarray,
     cell: float,
     pad: int = 28,
+    polys=None,
+    roads=None,
+    water=None,
+    max_px: int = 1500,
 ) -> str:
-    """按单元坐标画残差专题图（无 matplotlib 依赖）。"""
+    """残差专题图：有面数据则填色（含路网/水体底图），否则退回方块网格。"""
     from PIL import Image, ImageDraw
 
     xs = np.asarray(xs, dtype=float)
     ys = np.asarray(ys, dtype=float)
-    cell = float(cell) if cell else 250.0
-    x0, y0 = float(xs.min()), float(ys.min())
-    nx = max(1, int((xs.max() - x0) / cell) + 1)
-    ny = max(1, int((ys.max() - y0) / cell) + 1)
-    # 输出尺寸上限：全市 900 多格时按 1 像素画，区级按 6–18 像素画
-    scale = int(max(1, min(18, 1200 / max(nx, ny))))
+    resid = np.asarray(resid, dtype=float)
 
-    img = Image.new("RGB", (nx * scale + pad * 2, ny * scale + pad * 2 + 52), (255, 255, 255))
+    # ---- 覆盖范围：优先用面数据，边界更贴合 ----
+    if polys:
+        px = [v for f in polys if f for i, v in enumerate(f) if i % 2 == 0]
+        py = [v for f in polys if f for i, v in enumerate(f) if i % 2 == 1]
+        x0, x1 = (min(px), max(px)) if px else (float(xs.min()), float(xs.max()))
+        y0, y1 = (min(py), max(py)) if py else (float(ys.min()), float(ys.max()))
+    else:
+        c = float(cell) if cell else 250.0
+        x0, x1 = float(xs.min()), float(xs.max()) + c
+        y0, y1 = float(ys.min()), float(ys.max()) + c
+    w = max(1e-6, x1 - x0)
+    h = max(1e-6, y1 - y0)
+    sc = min((max_px - pad * 2) / w, (max_px * 0.86 - pad * 2) / h)
+    W = int(w * sc + pad * 2)
+    H = int(h * sc + pad * 2 + 58)
+
+    X = lambda x: pad + (x - x0) * sc
+    Y = lambda y: pad + (y1 - y) * sc
+
+    img = Image.new("RGB", (W, H), (255, 255, 255))
     dr = ImageDraw.Draw(img)
-    font = _load_cjk_font(11)
+    font = _load_cjk_font(12)
+    small = _load_cjk_font(10)
 
-    vmax = float(np.percentile(np.abs(resid), 95)) if resid.size else 1.0
+    # ---- 底图：水体 ----
+    if water:
+        for f in water:
+            if not f or len(f) < 6:
+                continue
+            pts = [(X(f[i]), Y(f[i + 1])) for i in range(0, len(f), 2)]
+            dr.polygon(pts, fill=(222, 234, 246))
+
+    vmax = float(np.percentile(np.abs(resid[np.isfinite(resid)]), 95)) if np.isfinite(resid).any() else 1.0
     vmax = vmax if vmax > 0 else 1.0
 
-    for k in range(resid.size):
-        cx = int((xs[k] - x0) / cell)
-        cy = int((ys[k] - y0) / cell)
-        x1 = pad + cx * scale
-        y1 = pad + (ny - 1 - cy) * scale
-        dr.rectangle([x1, y1, x1 + scale - 1, y1 + scale - 1],
-                     fill=_diverging_color(float(resid[k]), vmax))
+    # ---- 单元面填色 ----
+    used_poly = False
+    if polys and len(polys) == resid.size:
+        for k, f in enumerate(polys):
+            if not f or len(f) < 6:
+                continue
+            used_poly = True
+            pts = [(X(f[i]), Y(f[i + 1])) for i in range(0, len(f), 2)]
+            v = resid[k]
+            if not np.isfinite(v):
+                fill, out = (242, 244, 246), (226, 229, 233)
+            else:
+                fill, out = _diverging_color(float(v), vmax), (255, 255, 255)
+            dr.polygon(pts, fill=fill, outline=out)
 
-    dr.rectangle([pad, pad, pad + nx * scale - 1, pad + ny * scale - 1], outline=(90, 90, 90))
+    # ---- 底图：路网（压在面色之上、用浅色细线，保证可读） ----
+    if roads:
+        for seg in roads:
+            if not seg or len(seg) < 4:
+                continue
+            pts = [(X(seg[i]), Y(seg[i + 1])) for i in range(0, len(seg), 2)]
+            dr.line(pts, fill=(196, 201, 207), width=1)
 
-    ly = pad + ny * scale + 16
-    bar_w = 220
+    # ---- 无面数据时退回方块 ----
+    if not used_poly:
+        c = float(cell) if cell else 250.0
+        s2 = max(2, int(c * sc))
+        for k in range(resid.size):
+            if not np.isfinite(resid[k]):
+                continue
+            cx = int((xs[k] - x0) / c)
+            cy = int((ys[k] - y0) / c)
+            xa = int(X(x0 + cx * c))
+            ya = int(Y(y0 + (cy + 1) * c))
+            dr.rectangle([xa, ya, xa + s2 - 1, ya + s2 - 1],
+                         fill=_diverging_color(float(resid[k]), vmax))
+
+    # ---- 图例 ----
+    ly = pad + int(h * sc) + 18
+    bar_w = 240
     for i in range(bar_w):
         v = (i / (bar_w - 1) * 2 - 1) * vmax
-        dr.line([(pad + i, ly), (pad + i, ly + 10)], fill=_diverging_color(v, vmax))
+        dr.line([(pad + i, ly), (pad + i, ly + 9)], fill=_diverging_color(v, vmax))
+    cap = "残差专题图：蓝＝高估，红＝低估（±%.3f）；灰白＝无成交样本" % vmax
     if font is None:
-        dr.text((pad, ly - 14), "Residual (blue=over, red=under), +/-%.3f" % vmax, fill=(40, 40, 40))
-        dr.text((pad, ly + 13), "- over", fill=(60, 60, 60))
-        dr.text((pad + bar_w - 34, ly + 13), "under +", fill=(60, 60, 60))
+        dr.text((pad, ly - 15), cap.encode("ascii", "ignore").decode() or "Residual map",
+                fill=(40, 40, 40))
+        dr.text((pad, ly + 12), "- over", fill=(60, 60, 60))
+        dr.text((pad + bar_w - 34, ly + 12), "under +", fill=(60, 60, 60))
     else:
-        dr.text((pad, ly - 15), "残差专题图：蓝=高估，红=低估（±%.3f）；空白=无成交样本" % vmax,
-                fill=(40, 40, 40), font=font)
-        dr.text((pad, ly + 13), "− 高估", fill=(60, 60, 60), font=font)
-        dr.text((pad + bar_w - 36, ly + 13), "低估 +", fill=(60, 60, 60), font=font)
+        dr.text((pad, ly - 16), cap, fill=(40, 40, 40), font=font)
+        dr.text((pad, ly + 12), "− 高估", fill=(60, 60, 60), font=small)
+        dr.text((pad + bar_w - 36, ly + 12), "低估 +", fill=(60, 60, 60), font=small)
 
     img.save(path)
     return path
