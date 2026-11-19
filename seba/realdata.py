@@ -230,7 +230,9 @@ def _lattice_shapefile(bbox, step_m: float = 0.0, lat0: float = None, lon0: floa
     """
     x0, y0, x1, y1 = bbox
     if lat0 is None or lon0 is None:
-        lat0, lon0 = 31.2, 121.4
+        raise ValueError(
+            "_lattice_shapefile 需要显式传入 lat0/lon0（投影基准）；"
+            "内置默认值在换城市时会造成上千公里偏移。")
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     pad = 1000.0
@@ -265,7 +267,9 @@ def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0,
     else:
         sf = read_vector(P_ROADS)
     if lat0 is None or lon0 is None:
-        lat0, lon0 = 31.2, 121.4
+        raise ValueError(
+            "_load_roads 需要显式传入 lat0/lon0（投影基准）；"
+            "内置默认值在换城市时会造成上千公里偏移。")
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     x0, y0, x1, y1 = bbox
@@ -369,7 +373,9 @@ def _load_landuse(bbox, rep: BuildReport, lat0: float = None, lon0: float = None
     sf = read_vector(P_LANDUSE)
     # 必须与评估单元用同一坐标基准，否则地块会整体偏移（换城市时偏移可达上千公里）
     if lat0 is None or lon0 is None:
-        lat0, lon0 = 31.2, 121.4
+        raise ValueError(
+            "_load_landuse 需要显式传入 lat0/lon0（投影基准）；"
+            "内置默认值在换城市时会造成上千公里偏移。")
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     x0, y0, x1, y1 = bbox
