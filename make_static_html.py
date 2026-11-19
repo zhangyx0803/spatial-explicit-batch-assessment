@@ -616,6 +616,20 @@ function renderDecOut(){
 }
 
 function showDetail(k){
+  const _ut = (DATA.boot.units && DATA.boot.units.use_type || [])[k];
+  if (_ut && _ut !== '住宅') {
+    const nm = (DATA.boot.units.name || [])[k] || (DATA.boot.units.id || [])[k];
+    const body = document.getElementById('detailBody') || document.querySelector('#detailCard .pad');
+    const b = body || document.body;
+    b.innerHTML = '<div class="pad">'
+      + '<div style="display:flex;justify-content:space-between;padding:3px 0">'
+      + '<span style="color:#7a828c">单元用途</span><b>' + _ut + '</b></div>'
+      + '<div style="font-size:11px;color:#8d959f;line-height:1.8;margin-top:6px">'
+      + '该单元为公园、商业、学校或办公等非住宅用地，不参与估值与精度统计。</div>'
+      + '<div style="font-size:11px;color:#7a828c;margin-top:6px">' + nm + '</div>'
+      + '</div>';
+    return;
+  }
   const card=document.getElementById('detailCard'), body=document.getElementById('detailBody');
   card.hidden=false;
   const base=(R.arrays||{});

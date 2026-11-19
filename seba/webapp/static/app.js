@@ -1369,6 +1369,7 @@ const SCENES = {
   pick:      { probe: true },
   hover:     { probe: true, quiet: true },
   parkunit:  { unitName: '大宁灵石公园', tab: 'unit' },
+  parkhover: { hoverUnit: '大宁灵石公园' },
   zoom:      { zoom: 2.6 },
   diag:      { tab: 'diag' },                                 // 空间诊断
   factor:    { tab: 'factor' },                               // 因子设置
@@ -1398,6 +1399,18 @@ function runScene() {
     if (sc.field) {
       const sel = $('fieldSel');
       if (sel) { sel.value = sc.field; sel.onchange && sel.onchange(); }
+    }
+    if (sc.hoverUnit) {
+      const _hi = (S.boot.units.name || []).indexOf(sc.hoverUnit);
+      if (_hi >= 0) {
+        const cv = document.getElementById('map');
+        const rr = cv.getBoundingClientRect();
+        cv.dispatchEvent(new MouseEvent('mousemove', {
+          clientX: rr.left + X(S.boot.units.x[_hi]),
+          clientY: rr.top + Y(S.boot.units.y[_hi]),
+          bubbles: true
+        }));
+      }
     }
     if (sc.unitName) {
       const _i = (S.boot.units.name || []).indexOf(sc.unitName);
