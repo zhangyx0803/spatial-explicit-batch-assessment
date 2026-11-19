@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -163,6 +164,15 @@ SHOP_CLS = {
 RAIL_EXCLUDE = ("火车站", "虹桥站", "上海站", "上海南站", "上海西站", "南翔北站")
 
 
+RES_MIN_SHARE = 0.30   # 居住用地占比低于此值且名称非居委时，判为非住宅单元
+
+# 名称明显属于非住宅用途的关键词（公园、商业、学校、办公等）
+_NONRES_NAME = re.compile(
+    "公园|学校|大学|中学|小学|幼儿园|医院|公司|集团|基地|广场|办事处|街道办|"
+    "政府|车站|机场|市场|陵园|公墓|寺|庙|产业园|工业园|园区|商场|商厦|大厦$|"
+    "客运站|地铁|车辆段|水厂|电厂|变电")
+# 名称属于居委/村委会的
+_JW_NAME = re.compile("居委|居委会|村委会|村委|居民区|社区")
 ROAD_TRUNK = {"motorway", "trunk", "primary", "motorway_link", "trunk_link", "primary_link"}
 ROAD_SECOND = {"secondary", "tertiary", "secondary_link", "tertiary_link"}
 
@@ -954,6 +964,9 @@ def build_district_dataset(
     built = _rasterize_mask(built_rings, GX, GY, shape)
     comm_rings = [r for fc, r in landuse if fc in ("commercial", "retail", "industrial")]
     comm = _rasterize_mask(comm_rings, GX, GY, shape) if comm_rings else np.zeros_like(built)
+    # 居住用地：用于判定单元是否为住宅用地（剔除公园、商场、学校、办事处等）
+    res_rings = [r for fc, r in landuse if str(fc).lower() == "residential"]
+    res = _rasterize_mask(res_rings, GX, GY, shape) if res_rings else np.zeros_like(built)
 
     # 道路长度栅格
     road_len = np.zeros(shape, dtype=float)
@@ -970,6 +983,8 @@ def build_district_dataset(
     water_share = _disc_mean(water.astype(float), r_cells)
     built_share = _disc_mean(built.astype(float), r_cells)
     comm_share = _disc_mean(comm.astype(float), r_cells)
+    r_near = max(1, int(round(250.0 / cell_m)))
+    res_share = _disc_mean(res.astype(float), r_near)
     road_km_km2 = _disc_mean(road_len, r_cells) * 1000.0 / (cell_m ** 2)
 
     # 单元级取值（最近网格）
@@ -980,6 +995,7 @@ def build_district_dataset(
     f_built = built_share[uj, ui]
     f_road = road_km_km2[uj, ui]
     f_comm = comm_share[uj, ui]
+    f_res = res_share[uj, ui]
     rep.green_share_mean = float(f_green.mean())
     rep.water_share_mean = float(f_water.mean())
     rep.road_density_mean = float(f_road.mean())
@@ -1134,6 +1150,23 @@ def build_district_dataset(
     # 水平校准：让合成价格的均值正好等于区级官方均价（对数正态会自带系统性上移）
     price_pm2 *= base / price_pm2.mean()
 
+    # ---- 按用地性质剔除非住宅单元 ----
+    _names_arr = [str(x) for x in jwnames]
+    is_res = np.ones(len(ids), dtype=bool)
+    _why = []
+    for _i, _nm in enumerate(_names_arr):
+        if _NONRES_NAME.search(_nm):
+            is_res[_i] = False
+            _why.append("名称")
+        elif _JW_NAME.search(_nm):
+            is_res[_i] = True
+        else:
+            is_res[_i] = bool(f_res[_i] >= RES_MIN_SHARE)
+    units.use_type = np.where(is_res, "住宅", "非住宅")
+    rep.notes.append("用地性质：%d/%d 个单元判定为住宅用地，%d 个非住宅单元（公园、"
+                     "商业、学校、办公等）已排除，不参与估值与统计"
+                     % (int(is_res.sum()), len(ids), int((~is_res).sum())))
+
     # ---- 若已具备小区级真实挂牌价，优先用真实价 ----
     real_arr = _load_real_unit_prices(district, cx, cy, lat0, lon0)
     real_cov = float(np.isfinite(real_arr).mean()) if len(ids) else 0.0
@@ -1148,6 +1181,7 @@ def build_district_dataset(
         _src = "合成（水平锚定区级均价）"
         rep.notes.append("价格：真实小区价覆盖率仅 %.0f%%，本区仍用合成价格"
                          % (real_cov * 100))
+    has = has & is_res
     idx = np.nonzero(has)[0]
     obs = ObsTable(
         unit_idx=idx,
@@ -1199,6 +1233,7 @@ def build_district_dataset(
             "sch_class_cnt": sch_class,
             "sch_group": sch_group,
             "sch_catchment": sch_catch,
+            "res_share": f_res,
         },
     )
     if "metro" in poi_xy and poi_xy["metro"][0].size:

@@ -207,6 +207,17 @@ class AppState:
             sims[b] = np.exp(pred_log + eps)
         lo, mid, hi = np.percentile(sims, levels, axis=0)
 
+        # 非住宅单元（公园、商业、学校、办公等）不输出估值
+        _ut = getattr(self.ds.units, "use_type", None)
+        if _ut is not None:
+            _mask = np.asarray(_ut).astype(str) != "住宅"
+            if _mask.any():
+                est_median = np.where(_mask, np.nan, est_median)
+                est_mean = np.where(_mask, np.nan, est_mean)
+                lo = np.where(_mask, np.nan, lo)
+                mid = np.where(_mask, np.nan, mid)
+                hi = np.where(_mask, np.nan, hi)
+
         est_oof = np.exp(bundle.oof_log)
         ratio = ratio_study(
             est_oof, y,
@@ -238,6 +249,8 @@ class AppState:
         bias_unit = np.array([calib.bias_of(a) for a in self.ds.units.admin_code],
                              dtype=float)
         est_cal = np.exp(pred_log + bias_unit)
+        if _ut is not None:
+            est_cal = np.where(np.asarray(_ut).astype(str) != "住宅", np.nan, est_cal)
         grade_unit = [calib.grade_of(a) for a in self.ds.units.admin_code]
 
         resid_unit = np.full(self.ds.n_units, np.nan)
