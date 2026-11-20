@@ -5,7 +5,7 @@
 结构（geoms + attrs + kind + prj），这样下游 realdata 完全不用改。
 
 约定：
-  - 面要素：geoms[i] 是「环列表」[ndarray(n,2), ...]
+  - 面要素：geoms[i] 是“环列表”[ndarray(n,2), ...]
   - 线/点要素：geoms[i] 是 ndarray(n,2)（多段时取最长的一段，保证属性与几何一一对应）
 """
 

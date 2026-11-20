@@ -3,7 +3,7 @@
 
 用户丢上来一堆文件，系统要做三件事：
   1. 认出每个文件是什么（评估单元边界 / 路网 / 土地利用 / POI / 成交表）
-  2. 认出每个字段是什么意思（哪怕是「道路等级」而不是 fclass，或 ALAND 这种缩写）
+  2. 认出每个字段是什么意思（哪怕是“道路等级”而不是 fclass，或 ALAND 这种缩写）
   3. 给出置信度，让用户在界面上确认或改
 
 判据有两条：字段名的语义相似度 + 字段取值的形态特征。
@@ -482,7 +482,7 @@ def _assign_fields(fi: FileInfo, role: str) -> Tuple[Dict[str, str], Dict[str, f
         for col in fi.columns:
             ns = _name_score(col, fld)
             # 坐标类字段必须靠名字认：数值列太多（面积、楼层、总价都能是数字），
-            # 只看取值会把「建筑面积」误判成 Y 坐标
+            # 只看取值会把“建筑面积”误判成 Y 坐标
             if fld in ("x", "y") and ns < 0.2:
                 continue
             vals = fi.sample.get(col, [])

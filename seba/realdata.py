@@ -167,7 +167,7 @@ RAIL_EXCLUDE = ("火车站", "虹桥站", "上海站", "上海南站", "上海�
 RES_MIN_SHARE = 0.30   # 居住用地占比低于此值且名称非居委时，判为非住宅单元
 
 # 名称明显属于非住宅用途的关键词（公园、商业、学校、办公等）
-# 「地块」单独列出：村界数据里有一批「商业/工业地块（五）」这类单元，
+# “地块”单独列出：村界数据里有一批“商业/工业地块（五）”这类单元，
 # 名称不含“商业/工业”以外的设施词，但显然是经营性用地，不能当住宅。
 _NONRES_NAME = re.compile(
     "公园|学校|大学|中学|小学|幼儿园|医院|公司|集团|基地|广场|办事处|街道办|"
@@ -223,7 +223,7 @@ def _project_rings(rings: List[np.ndarray], lat0: float, lon0: float) -> List[np
 def _load_units(district: str, rep: BuildReport):
     sf = read_vector(P_VILLAGE)
     if not sf.attrs.get("所属区e"):
-        raise RealDataError("村界数据缺少「所属区县」字段")
+        raise RealDataError("村界数据缺少“所属区县”字段")
     all_d = sf.attrs[SOURCE["fields"]["village_district"]]
     idx = list(range(len(all_d))) if not district else [i for i, v in enumerate(all_d) if v == district]
     if not idx:
@@ -659,7 +659,7 @@ def _pack(lines, tol, digits=1):
 # ---------------------------------------------------------------------------
 
 def _norm_jw(t: str) -> str:
-    """居委名归一：去掉「居委会/居委」后缀与空白。"""
+    """居委名归一：去掉“居委会/居委”后缀与空白。"""
     t = str(t).strip()
     for suf in ("居民委员会", "居委会", "居委"):
         if t.endswith(suf):
@@ -718,7 +718,7 @@ def _load_real_unit_prices(district: str, cx, cy, lat0: float, lon0: float,
 
 
 def build_catchment(table_path: str):
-    """从官方对口表构建「居委短名 → (学校名, 班级数, 是否集团化)」。"""
+    """从官方对口表构建“居委短名 → (学校名, 班级数, 是否集团化)”。"""
     import csv as _csv
 
     if not table_path or not os.path.exists(table_path):

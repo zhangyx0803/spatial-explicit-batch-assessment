@@ -151,7 +151,7 @@ class FactorEngine:
         rows = []
         for code, arr in self.ds.attrs.items():
             f = self.cfg.factor(code)
-            # 该因子主要输入对应的图层版本，便于追溯「用的是哪一版图」
+            # 该因子主要输入对应的图层版本，便于追溯“用的是哪一版图”
             layer_ver = "—"
             for _k, _v in (f.inputs or {}).items():
                 _lay = self.ds.layers.get(str(_v))

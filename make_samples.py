@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成导入用的样例 CSV，放到「样例数据」目录。"""
+"""生成导入用的样例 CSV，放到“样例数据”目录。"""
 import os
 import numpy as np
 import pandas as pd

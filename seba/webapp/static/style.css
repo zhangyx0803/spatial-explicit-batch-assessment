@@ -957,7 +957,7 @@ select.input { cursor: pointer; }
 .lsym{width:11px;height:11px;flex:0 0 11px;display:inline-block;position:relative}
 .lsym.road{height:2px;background:rgba(74,86,100,.62);margin:5px 0}
 .lsym.water{background:#cfe0ee;border:1px solid #9bbbd4;border-radius:2px}
-.lsym.metro{border-radius:50%;background:#1f5f8b;border:1px solid #fff;box-shadow:0 0 0 1px #1f5f8b}
+.lsym.metro{border-radius:2px;background:#1a5fa8;border:1px solid #fff;box-shadow:0 0 0 1px #1a5fa8}
 .lsym.shop{background:#b26a1f;border-radius:1px}
 .lsym.bus{width:7px;height:7px;margin:2px;border-radius:50%;background:#5f6b78}
 .lsym.school{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #2c6e4f}

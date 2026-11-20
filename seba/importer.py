@@ -145,7 +145,7 @@ def _to_xy(df: pd.DataFrame, m: Dict, what: str) -> Tuple[np.ndarray, np.ndarray
         y = lat * 110540.0
         note = "经纬度 → 已换算为研究区局部平面坐标（中心纬度 %.3f°）" % lat0
     else:
-        raise ImportError2("%s 缺少坐标列：请指定「经度/纬度」或「X/Y」两列" % what)
+        raise ImportError2("%s 缺少坐标列：请指定“经度/纬度”或“X/Y”两列" % what)
 
     ok = np.isfinite(x) & np.isfinite(y)
     if ok.sum() < 3:
@@ -199,7 +199,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     # ---- 评估单元 ----
     u = spec.get("units") or {}
     if not (u.get("text") or u.get("b64")):
-        raise ImportError2("请先导入「评估单元」文件")
+        raise ImportError2("请先导入“评估单元”文件")
     udf = parse_table(_text(u))
     umap = u.get("map") or guess_map(list(udf.columns), "units")
     ux, uy, note = _to_xy(udf, umap, "评估单元")
@@ -253,12 +253,12 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     # ---- 成交 ----
     o = spec.get("obs") or {}
     if not (o.get("text") or o.get("b64")):
-        raise ImportError2("请导入「成交记录」文件")
+        raise ImportError2("请导入“成交记录”文件")
     odf = parse_table(_text(o))
     omap = o.get("map") or guess_map(list(odf.columns), "obs")
     idc = omap.get("unit_id")
     if not idc or idc not in odf.columns:
-        raise ImportError2("成交记录缺少「单元编号」列，无法与评估单元对应")
+        raise ImportError2("成交记录缺少“单元编号”列，无法与评估单元对应")
     idx_map = {uid: i for i, uid in enumerate(unit_id)}
     keep, rows = [], []
     for k, rid in enumerate(odf[idc].astype(str).to_numpy()):
@@ -273,14 +273,14 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     up_col, p_col = omap.get("unit_price"), omap.get("price")
     if up_col and up_col in odf.columns:
         price_pm2 = pd.to_numeric(odf[up_col], errors="coerce").to_numpy(dtype=float)
-        notes.append("成交：直接使用「成交单价」列")
+        notes.append("成交：直接使用“成交单价”列")
     elif p_col and p_col in odf.columns:
         total = pd.to_numeric(odf[p_col], errors="coerce").to_numpy(dtype=float)
         avg_area = float(spec.get("avg_area_m2") or 90.0)
         price_pm2 = total / max(avg_area, 1.0)
-        notes.append("成交：由「成交总价」除以套均面积 %.0f ㎡ 换算单价" % avg_area)
+        notes.append("成交：由“成交总价”除以套均面积 %.0f ㎡ 换算单价" % avg_area)
     else:
-        raise ImportError2("成交记录需要「成交单价」或「成交总价」列")
+        raise ImportError2("成交记录需要“成交单价”或“成交总价”列")
 
     dcol = omap.get("date")
     dates = odf[dcol].astype(str).to_numpy() if dcol and dcol in odf.columns \
@@ -384,7 +384,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         name = ly.get("name") or lmap.get("name") or lid
         if kind == "polygon":
             raise ImportError2("面图层暂只支持内置演示数据，请先用点图层导入（如公园中心点）")
-        lx, lyy, lnote = _to_xy(ldf, lmap, "图层「%s」" % name)
+        lx, lyy, lnote = _to_xy(ldf, lmap, "图层“%s”" % name)
         attrs = {}
         if lmap.get("weight") and lmap["weight"] in ldf.columns:
             w = pd.to_numeric(ldf[lmap["weight"]], errors="coerce")
@@ -395,7 +395,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
             fields=list(attrs), x=lx, y=lyy, attrs=attrs,
             aux_meta={"display_name": name},
         )
-        notes.append("图层「%s」：%d 个点%s" % (name, len(lx), "，含权重字段" if attrs else ""))
+        notes.append("图层“%s”：%d 个点%s" % (name, len(lx), "，含权重字段" if attrs else ""))
 
     ds = Dataset(
         grid=grid, units=units, obs=obs, layers=layers,

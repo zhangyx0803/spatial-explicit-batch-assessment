@@ -162,8 +162,25 @@ function ramp(stops, t) {
 const MAP = { s: 1, cell: 250, x0: 0, y0: 0, ctx: null, idx: null };
 
 function extentOf() {
-  const e = S.boot.project.extent;
   const cell = +S.boot.project.cell || 250;
+  // 只显示本区地块的外接框 + 100 米缓冲。
+  // 不能用 project.extent：那是连底图（邻区道路、水系、中心地）一起算的，
+  // 崇明会因此把浦东也框进来。
+  const polys = (S.boot.basemap || {}).unit_polys;
+  if (polys && polys.length) {
+    let a = 1e18, b = 1e18, c = -1e18, d = -1e18;
+    for (const f of polys) {
+      if (!f || f.length < 6) continue;
+      for (let i = 0; i < f.length; i += 2) {
+        if (f[i] < a) a = f[i];
+        if (f[i] > c) c = f[i];
+        if (f[i + 1] < b) b = f[i + 1];
+        if (f[i + 1] > d) d = f[i + 1];
+      }
+    }
+    if (c > a && d > b) return { x0: a - 100, y0: b - 100, x1: c + 100, y1: d + 100, cell };
+  }
+  const e = S.boot.project.extent;
   return { x0: e[0], y0: e[1], x1: e[2] + cell, y1: e[3] + cell, cell };
 }
 
@@ -191,7 +208,7 @@ function layoutMap() {
 
   const fit = Math.min(availW / wData, availH / hData);   // 适配比例
   const s = fit * VIEW.k;
-  // 以「数据中心」为锚点，平移到画布中心，再叠加平移量
+  // 以“数据中心”为锚点，平移到画布中心，再叠加平移量
   TF.s = s;
   TF.x0 = (g.x0 + g.x1) / 2;
   TF.y1 = (g.y0 + g.y1) / 2;
@@ -294,8 +311,11 @@ function clampView() {
   const g = extentOf();
   const fit = Math.min(w / Math.max(1, g.x1 - g.x0), h / Math.max(1, g.y1 - g.y0));
   const s = fit * VIEW.k;
-  const maxDx = Math.max(0, ((g.x1 - g.x0) * s - w) / 2);
-  const maxDy = Math.max(0, ((g.y1 - g.y0) * s - h) / 2);
+  // 判据：只要还有 1 个像素的内容落在画布上就允许，不再要求整幅图居中可见
+  const cw = (g.x1 - g.x0) * s;
+  const ch = (g.y1 - g.y0) * s;
+  const maxDx = Math.max(0, cw / 2 + w / 2 - 1);
+  const maxDy = Math.max(0, ch / 2 + h / 2 - 1);
   VIEW.dx = Math.max(-maxDx, Math.min(maxDx, VIEW.dx));
   VIEW.dy = Math.max(-maxDy, Math.min(maxDy, VIEW.dy));
 }
@@ -441,10 +461,7 @@ function drawMap0() {
     ? `高估 ${brief(-hi)}　0　低估 ${brief(hi)}`
     : `最低 ${brief(lo)}　中位 ${brief(mid)}　最高 ${brief(hi)}${p.price ? ' 元/㎡' : ''}`;
   $('footLegend').hidden = !p.div;
-  $('stageStat').textContent = nv
-    ? `${p.price ? '有价格的地块' : '有值的地块'} ${NF.format(nv)} 个　`
-      + `中位 ${p.price ? price(mid) + ' 元/㎡' : brief(mid)}`
-    : '';
+  $('stageStat').textContent = '';
   const bmFoot = (S.boot.basemap || {});
   $('footInfo').textContent =
     `地块 ${S.boot.project.n_units} 个　道路 ${(bmFoot.roads || []).length} 段　`
@@ -463,6 +480,7 @@ function drawBasemap(ctx, s, g) {
     ctx.strokeStyle = 'rgba(74,86,100,.30)';
     ctx.lineWidth = Math.max(0.5, s * 5);
     ctx.lineCap = 'round';
+    const _c1 = clipToDistrict(ctx);
     ctx.beginPath();
     for (const flat of bm.roads) {
       if (!flat || flat.length < 4) continue;
@@ -470,6 +488,7 @@ function drawBasemap(ctx, s, g) {
       for (let i = 2; i < flat.length; i += 2) ctx.lineTo(X(flat[i]), Y(flat[i + 1]));
     }
     ctx.stroke();
+    if (_c1) ctx.restore();
   }
 
   // 单元轮廓：极细白线，让相邻面块有分隔感但不割裂
@@ -497,6 +516,7 @@ function drawWater(ctx, s, g) {
   ctx.fillStyle = '#cfe0ee';
   ctx.strokeStyle = '#a8c4dc';
   ctx.lineWidth = 0.6;
+  const _c2 = clipToDistrict(ctx);
   ctx.beginPath();
   for (const flat of bm.water) {
     if (!flat || flat.length < 6) continue;
@@ -506,6 +526,7 @@ function drawWater(ctx, s, g) {
   }
   ctx.fill();
   ctx.stroke();
+  if (_c2) ctx.restore();
   ctx.restore();
 }
 
@@ -549,6 +570,7 @@ function drawPoints(ctx, s, g) {
     poi_school: { color: '#2c6e4f', r: 2.0, alpha: .72, shape: 'triangle' },
     poi_cbd: { color: '#9e3b30', r: 3.8, alpha: 1, shape: 'diamond' },
   };
+  const _c3 = clipToDistrict(ctx);
   for (const grp of groups) {
     if (!S.layersOn.has(grp.id)) continue;
     const st = style[grp.id] || { color: '#5f6b78', r: 1.3, alpha: .65, shape: 'circle' };
@@ -577,6 +599,18 @@ function drawPoints(ctx, s, g) {
     }
     ctx.restore();
   }
+  if (_c3) ctx.restore();
+}
+
+function clipToDistrict(ctx) {
+  const bm = (S.boot && S.boot.basemap) || {};
+  const units = S.boot && S.boot.units;
+  if (!units) return false;
+  const p = districtClipPath(bm, units);
+  if (!p) return false;
+  ctx.save();
+  ctx.clip(p);
+  return true;
 }
 
 function districtClipPath(bm, units) {
@@ -699,14 +733,14 @@ function renderMeta() {
   const rows = [
     ['评估单元', NF.format(p.n_units) + ' 个地块'],
     ['有价格', NF.format(p.n_obs) + ' 个地块'],
-    ['单元尺寸', `${num(p.cell, 0)} 米（因子栅格，不是地块面积）`],
-    ['地理底图', builtin ? '路网 2024 / 土地利用 2026 / OSM 设施' : '我的数据'],
-    ['价格来源', builtin ? '14 区：6,132 个小区 2024 挂牌价；崇明/金山：区级均价合成' : '我的数据'],
-    ['坐标系', 'WGS84 经纬度 → 本区平面投影（米）'],
-    ['路网节点', n.n_nodes == null ? '—（内置包未保存）' : NF.format(n.n_nodes)],
-    ['连通分量', n.n_components == null ? '—（内置包未保存）' : NF.format(n.n_components)],
-    ['吸附失败率', n.snap_fail == null ? '—（内置包未保存）' : pct(n.snap_fail, 2)],
-    ['平均吸附距离', n.snap_mean_dist == null ? '—（内置包未保存）' : `${num(n.snap_mean_dist, 0)} 米`],
+    ['单元尺寸', `${num(p.cell, 0)} 米`],
+    ['地理底图', builtin ? '内置' : '我的数据'],
+    ['价格来源', builtin ? '2024 小区挂牌价' : '我的数据'],
+    ['坐标系', 'WGS84'],
+    ['路网节点', n.n_nodes == null ? '—' : NF.format(n.n_nodes)],
+    ['连通分量', n.n_components == null ? '—' : NF.format(n.n_components)],
+    ['吸附失败率', n.snap_fail == null ? '—' : pct(n.snap_fail, 2)],
+    ['平均吸附距离', n.snap_mean_dist == null ? '—' : `${num(n.snap_mean_dist, 0)} 米`],
     ['因子数量', `${NF.format(b.factors.length)} 个（参与建模 ${S.result.features.length} 个）`],
   ];
   $('metaList').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -1206,7 +1240,7 @@ function renderLayerSlots() {
   if (!IMP.layers.length) return `<div class="slot-tip">尚未选择文件（学校、医院、地铁站、商业网点等，可多选）</div>`;
   return IMP.layers.map((ly, i) => `
     <div style="border-top:1px solid var(--line-soft);padding-top:6px;margin-top:6px">
-      <input class="input name" data-lname="${i}" value="${ly.name}" placeholder="给这份图层起个名字，如「学校」">
+      <input class="input name" data-lname="${i}" value="${ly.name}" placeholder="给这份图层起个名字，如“学校”">
       ${mappingHTML({ kind: 'layer', keys: SLOTS[3].keys }, ly, 'L' + i)}
     </div>`).join('');
 }
@@ -1278,8 +1312,8 @@ function collectSpec() {
 }
 
 async function applyImport() {
-  if (!IMP.units) { toast('请先选择「评估单元」文件', true); return; }
-  if (!IMP.obs) { toast('请先选择「成交记录」文件', true); return; }
+  if (!IMP.units) { toast('请先选择“评估单元”文件', true); return; }
+  if (!IMP.obs) { toast('请先选择“成交记录”文件', true); return; }
   try {
     setBusy(true);
     const j = await postJSON('/api/import', { spec: collectSpec() });
@@ -1590,8 +1624,8 @@ function renderDecResult() {
       html += '<div class="dec-note">差额来自你调低的支付意愿：这些价值在市场上存在，但对你个人不构成同等价值。</div>';
       const pos = cut.filter(x => x.gap > 1);
       if (pos.length) {
-        html += '<div class="dec-note">构成：' + pos.map(x =>
-          x.name + ' ' + price(x.gap) + ' 元/㎡' + (x.w < 0 ? '（反向折价）' : '') ).join('；') + '</div>';
+        html += pos.map(x => '<div class="dec-row sub"><span>' + x.name
+          + '</span><b>' + price(x.gap) + ' 元/㎡</b></div>').join('');
       }
     } else {
       html += '<div class="dec-row"><span>两者差额</span><b>+' + price(-diff) + ' 元/㎡（占市场价 ' + pct + '%）</b></div>';

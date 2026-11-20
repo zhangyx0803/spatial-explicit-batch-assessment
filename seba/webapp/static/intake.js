@@ -229,7 +229,7 @@ function itkValidate() {
 
   if (okAll && ITK.mapping.units) {
     const u = ITK.mapping.units;
-    notes.push(`将用 <b>${itkBase(u.path)}</b> 作为评估单元边界，通过「${u.fields.district || '—'}」筛选区县。`);
+    notes.push(`将用 <b>${itkBase(u.path)}</b> 作为评估单元边界，通过“${u.fields.district || '—'}”筛选区县。`);
     const opt = ['roads', 'landuse', 'poi', 'obs'].filter(r => ITK.mapping[r]);
     if (opt.length) {
       notes.push('同时接入：' + opt.map(r => j.role_spec[r].label).join('、') + '。');

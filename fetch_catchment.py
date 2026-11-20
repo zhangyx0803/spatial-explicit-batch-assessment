@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""抓取并解析各区教育局「公办小学招生划片范围」页，输出 config/catchment/<区>.csv。
+"""抓取并解析各区教育局“公办小学招生划片范围”页，输出 config/catchment/<区>.csv。
 
 只访问政府公开页面（shanghai.gov.cn），不涉及商业网站。
 """
@@ -80,7 +80,7 @@ def fetch(url: str) -> str:
 
 
 def pick_columns(rows):
-    """在表头行里找「学校名」「对口范围」两列的下标。兼容多种写法。"""
+    """在表头行里找“学校名”“对口范围”两列的下标。兼容多种写法。"""
     NAME_KEYS = ("学校名称", "校名", "学校", "校 名", "单位")
     SCOPE_KEYS = ("对口", "划片", "地段", "居委")
     for i, row in enumerate(rows[:8]):
@@ -110,7 +110,7 @@ def parse_district(name: str, url: str):
             continue
         hi, ni, ji, ci = info
         body = [r for r in rows[hi + 1:] if len(r) > max(ni, ji) and r[ni]]
-        # 只保留看起来像学校的行，并按「对口文本总量」打分，避免选中汇总表
+        # 只保留看起来像学校的行，并按“对口文本总量”打分，避免选中汇总表
         body = [r for r in body if re.search(r"[学幼]", r[ni])]
         score = sum(len(r[ji]) for r in body)
         if body and score > best_score:

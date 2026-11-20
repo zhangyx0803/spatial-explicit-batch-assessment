@@ -67,7 +67,7 @@ _USE_HINT = (
 
 
 def _use_detail(name: str, use_type: str) -> str:
-    """把「非住宅」细化为学校 / 公园 / 商业 / 办公 等，便于阅读。"""
+    """把“非住宅”细化为学校 / 公园 / 商业 / 办公 等，便于阅读。"""
     if str(use_type) == "住宅":
         return "住宅"
     n = str(name or "")
@@ -371,7 +371,7 @@ class AppState:
 
         道路/水体/中心地原本就在 ds.basemap 里；地铁、商业、公交、学校等
         点图层只存在 ds.layers 中，前端没有坐标就画不出来，所以在这里统一
-        打包成 {id, name, xy}，供「数据图层」勾选叠加。
+        打包成 {id, name, xy}，供“数据图层”勾选叠加。
         """
         bm = dict(getattr(self.ds, "basemap", {}) or {})
         pts = []
@@ -481,7 +481,7 @@ class AppState:
         from ..decompose import BUYER_HINT, decompose as _dec
 
         # 非住宅单元（学校、公园、商业、办公等）没有住宅价格，不能做价格拆解。
-        # 否则模型会拿周边住宅样本外推一个「价格」，看起来像真的。
+        # 否则模型会拿周边住宅样本外推一个“价格”，看起来像真的。
         _ut = getattr(self.ds.units, "use_type", None)
         if _ut is not None and str(_ut[int(idx)]) != "住宅":
             _nm = ""
@@ -872,7 +872,7 @@ class AppState:
         for slot in tpl["inputs"]:
             val = (mapping or {}).get(slot)
             if not val:
-                raise ValueError("请为「%s」选择一个输入" % slot)
+                raise ValueError("请为“%s”选择一个输入" % slot)
             inputs[slot] = val
         p = dict(tpl["params"])
         p.update(params or {})
@@ -991,14 +991,14 @@ class AppState:
 
 
     def _data_nature_text(self) -> str:
-        """导出报告里「数据性质」一栏的文字，按实际成交来源判定。"""
+        """导出报告里“数据性质”一栏的文字，按实际成交来源判定。"""
         src = set(str(x) for x in self.ds.obs.source)
         if any('合成' in x for x in src):
             return '合成演示数据，精度指标不代表实盘能力'
         return '小区级真实挂牌价（按 800 米聚合到评估单元），精度指标反映真实价格的可解释程度'
 
     def _data_version_text(self) -> str:
-        """导出报告里「数据版本」一栏的文字。"""
+        """导出报告里“数据版本”一栏的文字。"""
         if self.source == 'user':
             return '用户导入'
         src = set(str(x) for x in self.ds.obs.source)
