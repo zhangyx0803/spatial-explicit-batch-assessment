@@ -611,7 +611,7 @@ function showDecomp(k){
   for (const it of d.items) {
     const w = 50;
     html += '<tr data-code="' + it.code + '">'
-      + '<td class="wc"><input type="range" min="-100" max="100" step="10" value="' + w + '" data-c="' + it.code + '"><b>' + w + '%</b></td>'
+      + '<td class="wc"><input type="range" min="0" max="100" step="10" value="' + w + '" data-c="' + it.code + '"><b>' + w + '%</b></td>'
       + '<td class="nm">' + it.name + (it.hint ? '<div class="h2">' + it.hint + '</div>' : '') + '</td>'
       + '<td class="cr">' + (it.c >= 0 ? '+' : '') + NF.format(it.c)
       + '<div class="civ">' + NF.format(it.lo) + '~' + NF.format(it.hi) + (it.sig ? '' : '?') + '</div></td>'
