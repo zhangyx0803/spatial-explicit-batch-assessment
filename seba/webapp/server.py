@@ -98,6 +98,10 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/unit":
                 i = int((q.get("i") or ["0"])[0])
                 return self._json({"ok": True, **self.state.unit_detail(i)})
+            if p == "/api/districts":
+                st = self.state
+                return self._json({"ok": True, "current": getattr(st, "current", None),
+                                   "districts": getattr(st, "districts", [])})
             if p.startswith("/files/"):
                 name = os.path.basename(p[len("/files/"):])
                 path = os.path.join(self.out_dir, name)

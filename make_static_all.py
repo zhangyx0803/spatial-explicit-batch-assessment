@@ -23,7 +23,7 @@ OUT = os.path.join(HERE, "dist_static")
 INDEX = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>空间显式批量评估工作台系统 V1.0 · 离线成果</title>
+<title>空间显式批量评估工作台系统 · 离线成果</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#eef0f3;font:13px/1.6 "Microsoft YaHei","PingFang SC",sans-serif;color:#232a31}
@@ -40,7 +40,7 @@ a.card span{display:block;font-size:10.5px;color:#8d959f;font-family:Consolas,mo
   font-size:11px;color:#8d959f;line-height:1.9}
 @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><div class="wrap">
-<h1>空间显式批量评估工作台系统 V1.0</h1>
+<h1>空间显式批量评估工作台系统</h1>
 <p class="sub">离线成果浏览 · 内置上海 16 个区 · 点击任意一个区打开</p>
 <div class="grid">__CARDS__</div>
 <div class="foot">
@@ -51,8 +51,8 @@ a.card span{display:block;font-size:10.5px;color:#8d959f;font-family:Consolas,mo
 """
 
 CARD = ('<a class="card" href="{file}"><b>{name}</b>'
-        '<span>{units} 单元 · {obs} 成交</span>'
-        '<span>R² {r2}</span></a>')
+        '<span>{units} 个地块　{obs} 个有价格</span>'
+        '<span>模型解释度 {r2}%</span></a>')
 
 
 def main() -> int:
@@ -81,7 +81,7 @@ def main() -> int:
         title = proj.get("name") or (name + " 评估结果")
         blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         html = (HTML_TEMPLATE
-                .replace("__TITLE__", title + " · 离线网页版")
+                .replace("__TITLE__", title + "（离线网页版）")
                 .replace("__BUILT__", payload["built"])
                 .replace("__PAYLOAD__", blob))
         fn = "%s_网页版.html" % name
@@ -92,7 +92,7 @@ def main() -> int:
             file=fn, name=name,
             units="{:,.0f}".format(proj.get("n_units") or 0),
             obs="{:,.0f}".format(proj.get("n_obs") or 0),
-            r2=("%.3f" % r2) if r2 is not None else "—",
+            r2=("%.1f" % (r2 * 100)) if r2 is not None else "—",
         ))
         print("[%2d/%d] %-6s %5.2f MB  %.0fs" % (i, len(names), name, mb, time.time() - t0), flush=True)
 

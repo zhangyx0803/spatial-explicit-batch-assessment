@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 BASE_FIELDS = [
     ("est_median", "估值单价（中位口径）", "money", False),
-    ("obs_price", "实际成交单价", "money", False),
+    ("obs_price", "实际挂牌单价", "money", False),
     ("est_mean", "估值单价（均值口径）", "money", False),
     ("p_low", "区间下限 P10", "money", False),
     ("p_high", "区间上限 P90", "money", False),
@@ -109,10 +109,10 @@ body{font:13px/1.5 "Microsoft YaHei","PingFang SC","Helvetica Neue",Arial,sans-s
   color:#1a1e24;background:#eceef1;display:flex;flex-direction:column}
 .appbar{height:44px;flex:0 0 44px;background:#222a33;color:#dfe4ea;display:flex;align-items:center;
   gap:12px;padding:0 14px}
-.appbar .mark{font-weight:700;letter-spacing:.06em;font-size:12px;color:#fff;
-  background:#1f4e5f;padding:3px 8px;border-radius:3px}
-.appbar b{font-size:13px;color:#fff;font-weight:600}
-.appbar .v{font-size:10px;color:#8d959f;border:1px solid #3a434d;padding:0 4px;border-radius:2px}
+.appbar .brand{display:flex;flex-direction:column;justify-content:center;gap:1px;white-space:nowrap}
+.appbar .brand-en{font:500 7.5px/1.1 Consolas,Monaco,monospace;letter-spacing:.16em;
+  text-transform:uppercase;color:#93a0aa}
+.appbar .brand-cn{font-size:13px;color:#fff;font-weight:600;letter-spacing:.3px}
 .appbar .proj{color:#98a2ad;font-size:11.5px}
 .appbar .grow{flex:1}
 .appbar .tag{font-size:11px;color:#9fb3c8;border:1px solid #3a434d;padding:2px 7px;border-radius:2px}
@@ -148,10 +148,11 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 .stage-head .muted{color:#8d959f;font-size:11px;margin-left:auto;
   font-family:Consolas,Monaco,monospace}
 #cv{flex:1;display:block;min-height:0;cursor:crosshair}
-.stage-foot{height:34px;flex:0 0 34px;display:flex;align-items:center;gap:10px;padding:0 12px;
+.stage-foot{min-height:34px;flex:0 0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:3px 12px;
   border-top:1px solid #e6e9ec;font-size:11px;color:#7a828c}
 #ramp{width:120px;height:9px;border:1px solid #d7dade;border-radius:1px}
-.legend{display:flex;align-items:center;gap:4px}
+#footInfo{white-space:normal}
+.legend{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .cdot{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid #fff;margin-left:6px}
 .cdot.l1{background:#7d2a1c}.cdot.l2{background:#a86f16}.cdot.l3{background:#2f5f7d}
 .mono{font-family:Consolas,Monaco,monospace;font-variant-numeric:tabular-nums}
@@ -188,8 +189,10 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 </head>
 <body>
 <header class="appbar">
-  <div class="mark">SEBA</div>
-  <div><b>空间显式批量评估工作台</b> <span class="v">V1.0</span></div>
+  <div class="brand">
+    <span class="brand-en">Spatial Explicit Batch Assessment</span>
+    <span class="brand-cn">空间显式批量评估工作台</span>
+  </div>
   <div class="proj" id="projName"></div>
   <div class="grow"></div>
   <div class="tag">离线网页版 · 生成于 __BUILT__</div>
@@ -234,8 +237,8 @@ table{width:100%;border-collapse:collapse;font-size:12px}
       <span class="grow" style="flex:1"></span>
       <span class="legend">
         <i class="cdot l1"></i>市级中心地
-        <i class="cdot l2"></i>区级
-        <i class="cdot l3"></i>社区级
+        <i class="cdot l2"></i>区级中心地
+        <i class="cdot l3"></i>社区级中心地
       </span>
       <span id="footInfo"></span>
     </div>
@@ -264,7 +267,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}
       <div class="pad" style="padding:0"><table class="tbl" id="vifTbl"></table></div>
     </section>
     <section class="card">
-      <h2>空间诊断</h2>
+      <h2>空间诊断 <span class="muted small" style="font-weight:400">全区口径，不是单个地块</span></h2>
       <div class="pad" id="diagBody"></div>
     </section>
   </aside>
@@ -317,6 +320,17 @@ function hexRound(q,r){
   if(dx>dy&&dx>dz)rx=-ry-rz; else if(dy>dz)ry=-rx-rz; else rz=-rx-ry;
   return [rx,rz];
 }
+function cname(c){
+  if(c && c.name) return c.name;
+  let b=-1,bd=1e18;
+  for(let i=0;i<U.x.length;i++){
+    const dx=U.x[i]-c.x, dy=U.y[i]-c.y, d=dx*dx+dy*dy;
+    if(d<bd){bd=d;b=i;}
+  }
+  if(b<0) return '';
+  let s=String(U.name[b]||'').replace(/居民委员会|居委会|村民委员会|村委会/g,'');
+  return s.length>10?s.slice(0,10):s;
+}
 function draw(){
   GEO = layout();
   const {w,h} = GEO;
@@ -331,13 +345,7 @@ function draw(){
   const lo=at(0.02), hi=at(0.98);
   const rankT = x => { let a=0,b=nv-1; while(a<=b){const m=(a+b)>>1; if(sorted[m]<x)a=m+1;else b=m-1;} return nv>1?a/(nv-1):0.5; };
 
-  // 水体
-  if(BM.water && BM.water.length){
-    ctx.fillStyle='#dce8f2'; ctx.beginPath();
-    for(const f of BM.water){ if(!f||f.length<6)continue; ctx.moveTo(X(f[0]),Y(f[1]));
-      for(let i=2;i<f.length;i+=2)ctx.lineTo(X(f[i]),Y(f[i+1])); ctx.closePath(); }
-    ctx.fill();
-  }
+  // 水体在下面画，避免被地块色块盖住
 
   const usePoly = BM.unit_polys && BM.unit_polys.length===U.x.length;
   const mode = S.geom==='poly'&&!usePoly ? 'dot' : S.geom;
@@ -402,14 +410,48 @@ function draw(){
       for(let i=2;i<f.length;i+=2)ctx.lineTo(X(f[i]),Y(f[i+1])); ctx.closePath(); }
     ctx.stroke();
   }
-  // 中心地
+  // 水体：画在地块之上，且不裁剪，河道才看得见
+  if(BM.water && BM.water.length){
+    ctx.fillStyle='#cfe0ee'; ctx.strokeStyle='#a8c4dc'; ctx.lineWidth=.6;
+    ctx.beginPath();
+    for(const f of BM.water){ if(!f||f.length<6)continue; ctx.moveTo(X(f[0]),Y(f[1]));
+      for(let i=2;i<f.length;i+=2)ctx.lineTo(X(f[i]),Y(f[i+1])); ctx.closePath(); }
+    ctx.fill(); ctx.stroke();
+  }
+  // 设施点：不同设施用不同形状，避免满屏都是圆点
+  if(BM.points && BM.points.length){
+    const sty={poi_metro:['#1f5f8b',3.0,1,'circle'],poi_shop:['#b26a1f',1.7,.62,'square'],
+      poi_bus:['#5f6b78',1.2,.55,'circle'],poi_school:['#2c6e4f',2.0,.72,'triangle'],
+      poi_cbd:['#9e3b30',3.8,1,'diamond']};
+    for(const g of BM.points){
+      const st=sty[g.id]||['#5f6b78',1.2,.55,'circle'];
+      ctx.save(); ctx.globalAlpha=st[2]; ctx.fillStyle=st[0];
+      for(const p of (g.xy||[])){
+        const px=X(p[0]),py=Y(p[1]),r=st[1];
+        ctx.beginPath();
+        if(st[3]==='square') ctx.rect(px-r,py-r,r*2,r*2);
+        else if(st[3]==='triangle'){ ctx.moveTo(px,py-r*1.2); ctx.lineTo(px+r*1.1,py+r*.8); ctx.lineTo(px-r*1.1,py+r*.8); ctx.closePath(); }
+        else if(st[3]==='diamond'){ ctx.moveTo(px,py-r*1.15); ctx.lineTo(px+r*1.05,py); ctx.lineTo(px,py+r*1.15); ctx.lineTo(px-r*1.05,py); ctx.closePath(); }
+        else ctx.arc(px,py,r,0,Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  // 中心地（不裁剪，区界附近的市级/区级中心也能显示）
   if(BM.centers){
     const col={1:'#7d2a1c',2:'#a86f16',3:'#2f5f7d'};
     for(const c of BM.centers){
-      const r=c.level===1?5.5:(c.level===2?4:2.6);
+      const r=c.level===1?6.5:(c.level===2?4.6:3.2);
       ctx.beginPath(); ctx.arc(X(c.x),Y(c.y),r,0,Math.PI*2);
       ctx.fillStyle=col[c.level]||'#666'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.stroke();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.3; ctx.stroke();
+      const nm=cname(c);
+      if(nm){
+        ctx.font=(c.level===1?'600 10.5px':'10px')+' "Microsoft YaHei",sans-serif';
+        ctx.fillStyle='rgba(32,36,40,.88)'; ctx.strokeStyle='rgba(255,255,255,.95)'; ctx.lineWidth=2.4;
+        ctx.strokeText(nm,X(c.x)+r+3,Y(c.y)+3); ctx.fillText(nm,X(c.x)+r+3,Y(c.y)+3);
+      }
     }
   }
   // 选中高亮
@@ -426,16 +468,20 @@ function draw(){
     }
   }
 
-  // 图例
+  // 图例：三个数分别是最低、中位、最高，避免只给一串数字
   const g=ctx.createLinearGradient(0,0,120,0);
   const stops = F1.div?DIV:SEQ;
   stops.forEach((c,i)=>g.addColorStop(i/(stops.length-1),c));
   const rampEl=document.getElementById('ramp');
   rampEl.style.background=`linear-gradient(90deg,${stops.join(',')})`;
+  const _u = F1.kind==='money'?' 元/㎡':'';
   document.getElementById('rampLabels').textContent =
-    (F1.kind==='money'?money(lo):brief(lo))+' → '+(F1.kind==='money'?money(hi):brief(hi));
+    '最低 '+(F1.kind==='money'?money(lo):brief(lo))
+    +'　中位 '+(F1.kind==='money'?money(at(.5)):brief(at(.5)))
+    +'　最高 '+(F1.kind==='money'?money(hi):brief(hi)) + _u;
+  const _np = (B.has_obs||[]).filter(Boolean).length;
   document.getElementById('mapStats').textContent =
-    `单元 ${U.x.length}　中位 ${F1.kind==='money'?money(at(.5)):brief(at(.5))}`;
+    `有价格的地块 ${_np} 个　中位 ${F1.kind==='money'?money(at(.5)):brief(at(.5))}`;
 }
 
 /* ---------- 表格 ---------- */
@@ -443,16 +489,19 @@ function kv(el, rows){
   el.innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
 }
 function build(){
-  document.getElementById('projName').textContent = P.name || '';
-  document.title = (P.name||'评估结果') + ' · 空间显式批量评估工作台';
+  document.getElementById('projName').textContent = String(P.name||'').split(' · ')[0];
+  document.title = (String(P.name||'评估结果').split(' · ')[0]) + ' · 空间显式批量评估工作台系统';
   document.getElementById('mapTitle').textContent = F[S.field]?.name || '';
 
+  const _n = B.network || {};
   kv(document.getElementById('projInfo'), [
-    ['评估单元', NF.format(P.n_units)],
-    ['成交样本', NF.format(P.n_obs)],
-    ['单元尺寸', (P.cell||0)+' 米'],
-    ['路网节点', NF.format((B.network||{}).n_nodes||0)],
-    ['吸附失败率', ((B.network||{}).snap_fail*100||0).toFixed(2)+'%'],
+    ['评估地块', NF.format(P.n_units)],
+    ['有价格', NF.format(P.n_obs)],
+    ['单元尺寸', (P.cell||0)+' 米（因子栅格）'],
+    ['地理底图', '路网 2024 / 土地利用 2026 / OSM 设施'],
+    ['价格来源', '14 区：6,132 个小区 2024 挂牌价；崇明/金山：区级均价合成'],
+    ['路网节点', _n.n_nodes == null ? '—（内置包未保存）' : NF.format(_n.n_nodes)],
+    ['吸附失败率', _n.snap_fail == null ? '—（内置包未保存）' : (_n.snap_fail*100).toFixed(2)+'%'],
     ['因子数量', (B.factors||[]).length],
   ]);
 
@@ -462,9 +511,9 @@ function build(){
   const codOk = cod != null && cod <= (rt.cod_max||15);
   const prdOk = prd != null && prd >= (rt.prd_low||0.98) && prd <= (rt.prd_high||1.03);
   kv(document.getElementById('metricTbl'), [
-    ['训练 R²', `<span class="big ok">${(tr.r2||0).toFixed(3)}</span>`],
-    ['空间块 CV R²', `<span class="big">${(cvs.r2||0).toFixed(3)}</span>`],
-    ['随机 CV R²', (cvr.r2||0).toFixed(3)],
+    ['训练解释度', `<span class="big ok">${((tr.r2||0)*100).toFixed(1)}%</span>`],
+    ['空间留出解释度', `<span class="big">${((cvs.r2||0)*100).toFixed(1)}%</span>`],
+    ['随机留出解释度', `${((cvr.r2||0)*100).toFixed(1)}%`],
     ['MAPE', ((tr.mape||0)).toFixed(1)+'%'],
     ['离散系数 COD', `${cod==null?'—':cod.toFixed(1)} <span class="pill ${codOk?'ok':'bad'}">${codOk?'达标':'超限'}</span>`],
     ['价格相关差 PRD', `${prd==null?'—':prd.toFixed(3)} <span class="pill ${prdOk?'ok':'bad'}">${prdOk?'达标':'超限'}</span>`],
@@ -510,7 +559,7 @@ function build(){
         : '残差空间自相关不显著，全局模型可接受。')}</div>`;
 
   document.getElementById('footInfo').textContent =
-    `道路 ${(BM.roads||[]).length} · 水体 ${(BM.water||[]).length} · 中心地 ${(BM.centers||[]).length}`;
+    `道路 ${(BM.roads||[]).length} 段　水体 ${(BM.water||[]).length} 处　中心地 ${(BM.centers||[]).length} 个`;
 }
 
 /* ---------- 交互 ---------- */
@@ -537,7 +586,7 @@ function showDecomp(k){
   card.hidden = false;
   DECP.cur = d;
   DECP.w = {};
-  d.items.forEach(it => { DECP.w[it.code] = 1; });
+  d.items.forEach(it => { DECP.w[it.code] = 0.5; });
 
   const issues = [];
   if (d.n < 100) issues.push('样本仅 ' + d.n + ' 套');
@@ -560,9 +609,9 @@ function showDecomp(k){
 
   html += '<table class="dec-tbl2">';
   for (const it of d.items) {
-    const w = 100;
+    const w = 50;
     html += '<tr data-code="' + it.code + '">'
-      + '<td class="wc"><input type="range" min="0" max="100" step="10" value="' + w + '" data-c="' + it.code + '"><b>' + w + '%</b></td>'
+      + '<td class="wc"><input type="range" min="-100" max="100" step="10" value="' + w + '" data-c="' + it.code + '"><b>' + w + '%</b></td>'
       + '<td class="nm">' + it.name + (it.hint ? '<div class="h2">' + it.hint + '</div>' : '') + '</td>'
       + '<td class="cr">' + (it.c >= 0 ? '+' : '') + NF.format(it.c)
       + '<div class="civ">' + NF.format(it.lo) + '~' + NF.format(it.hi) + (it.sig ? '' : '?') + '</div></td>'
@@ -591,42 +640,43 @@ function renderDecOut(){
   const list = [];
   let anyOff = false;
   for (const it of d.items) {
-    const w = DECP.w[it.code] == null ? 1 : DECP.w[it.code];
+    const pref = DECP.w[it.code] == null ? 0.5 : DECP.w[it.code];
+    const w = pref * 2;
     adapted += w * it.c;
-    if (w < 1) {
+    if (Math.abs(w - 1) > 1e-9) {
       anyOff = true;
-      if (it.c > 0) list.push({ name: it.name, cut: (1 - w) * it.c });
+      if (w < 1 && it.c > 0) list.push({ name: it.name, cut: (1 - w) * it.c });
     }
   }
   if (!anyOff) adapted = d.model;
   const diff = d.model - adapted;
   const area = 90;
-  let h = '<div class="row"><span>市场合理价</span><b>' + NF.format(d.model) + ' 元/㎡</b></div>';
-  h += '<div class="row"><span>对你而言的适配价</span><b class="big">' + NF.format(Math.round(adapted)) + ' 元/㎡</b></div>';
+  let h = '<div class="row"><span>市场平均价</span><b>' + NF.format(d.model) + ' 元/㎡</b></div>';
+  h += '<div class="row"><span>按你的支付意愿</span><b class="big">' + NF.format(Math.round(adapted)) + ' 元/㎡</b></div>';
   if (anyOff) {
-    h += '<div class="row"><span>' + (diff > 0 ? '你为不需要的东西多付' : '你占到的便宜') + '</span>'
+    h += '<div class="row"><span>' + (diff > 0 ? '你为不需要的部分少付' : '你的支付意愿高于市场') + '</span>'
       + '<b style="color:' + (diff > 0 ? '#8a3b2c' : '#2f6b46') + '">' + NF.format(Math.round(Math.abs(diff))) + ' 元/㎡</b></div>';
     h += '<div class="note">按 ' + area + ' ㎡ 折算：市场 ' + NF.format(Math.round(d.model * area))
       + ' 元 → 适配 ' + NF.format(Math.round(adapted * area)) + ' 元（差 '
       + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
-    if (list.length) h += '<div class="note">冤枉钱：' + list.map(x => x.name + ' ' + NF.format(Math.round(x.cut))).join('、') + ' 元/㎡</div>';
   } else {
-    h += '<div class="note">把用不上的因素拉低（比如有车不需要地铁拉到 0%），看适配价能降多少。</div>';
+    h += '<div class="note">各项均为 50%（市场平均）时，适配价与市场平均价相同。调整滑杆即可看到差异。</div>';
   }
   document.getElementById('decOut').innerHTML = h;
 }
 
 function showDetail(k){
   const _ut = (DATA.boot.units && DATA.boot.units.use_type || [])[k];
+  const _ud = (DATA.boot.units && DATA.boot.units.use_detail || [])[k] || _ut;
   if (_ut && _ut !== '住宅') {
     const nm = (DATA.boot.units.name || [])[k] || (DATA.boot.units.id || [])[k];
     const body = document.getElementById('detailBody') || document.querySelector('#detailCard .pad');
     const b = body || document.body;
     b.innerHTML = '<div class="pad">'
       + '<div style="display:flex;justify-content:space-between;padding:3px 0">'
-      + '<span style="color:#7a828c">单元用途</span><b>' + _ut + '</b></div>'
+      + '<span style="color:#7a828c">单元用途</span><b>' + _ud + '</b></div>'
       + '<div style="font-size:11px;color:#8d959f;line-height:1.8;margin-top:6px">'
-      + '该单元为公园、商业、学校或办公等非住宅用地，不参与估值与精度统计。</div>'
+      + '该单元为' + _ud + '用地，不参与估值与精度统计。</div>'
       + '<div style="font-size:11px;color:#7a828c;margin-top:6px">' + nm + '</div>'
       + '</div>';
     return;
@@ -635,11 +685,10 @@ function showDetail(k){
   card.hidden=false;
   const base=(R.arrays||{});
   const rows=[];
-  rows.push(['单元编号', U.id[k]]);
   rows.push(['所属街道', U.admin?U.admin[k]:'—']);
   rows.push(['面积', NF.format(Math.round(U.area?U.area[k]:0))+' ㎡']);
   rows.push(['坐标', `${Math.round(U.x[k])}, ${Math.round(U.y[k])}`]);
-  rows.push(['有成交', B.has_obs&&B.has_obs[k]?'是':'否']);
+  rows.push(['有价格', B.has_obs&&B.has_obs[k]?'是':'否']);
   rows.push(['估值中位', base.est_median?money(base.est_median[k]):'—']);
   rows.push(['区间', base.p_low?`${money(base.p_low[k])} ~ ${money(base.p_high[k])}`:'—']);
   if(base.resid) rows.push(['残差', Number(base.resid[k]).toFixed(4)]);

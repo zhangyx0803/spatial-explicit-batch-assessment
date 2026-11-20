@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>空间显式批量评估工作台系统 V1.0</title>
+<title>空间显式批量评估工作台</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,23 +12,25 @@
     <div class="pickbox">
       <div class="pickhead">
         <h1>选择要看哪个区</h1>
-        <p>软件内置上海 16 个区的数据。选一个区，加载后即可在地图上点选地块、做价格拆解。</p>
+        <p>软件内置上海 16 个区的数据。每个「单元」是一个村/居委会的地块（不是小区），价格由地块内的小区挂牌价汇总而来。选一个区，加载后即可在地图上点选地块、做价格拆解。</p>
       </div>
       <div class="pickgrid" id="pickGrid"></div>
       <div class="pickfoot">
-        <span class="hint" style="margin:0">价格来自 6,132 个小区 2024 年的真实挂牌价，按 800 米聚合到地块。挂牌价不等于成交价，通常略高。</span>
+        <span class="hint" style="margin:0">价格来自 6,132 个小区 2024 年的真实挂牌价，按 800 米聚合到地块；挂牌价不等于成交价，通常略高。R² 是模型能解释的价格差异比例，样本越少、区内差异越大通常越低；崇明、金山仍为区级均价合成价。进入后可在顶部行政区下拉框随时切换。</span>
       </div>
     </div>
   </div>
 
 
 <header class="appbar">
-  <div class="mark" title="Spatial Explicit Batch Assessment · 空间显式批量评估">SEBA</div>
-  <div class="title"><b>空间显式批量评估工作台</b><span class="v">V1.0</span></div>
+  <div class="brand" title="Spatial Explicit Batch Assessment">
+    <span class="brand-en">Spatial Explicit Batch Assessment</span>
+    <span class="brand-cn">空间显式批量评估工作台</span>
+  </div>
   <div class="proj" id="projName">…</div>
-  <button class="btn small" id="btnDistrict" hidden title="切换到别的区">
-    <span id="districtName">徐汇区</span> ⇄
-  </button>
+  <span class="district-label" id="districtLabel" hidden>行政区</span>
+  <select class="district-select" id="districtSel" title="切换行政区" hidden></select>
+  <button class="btn" id="btnDiag" title="查看整区尺度的空间诊断">全区诊断</button>
   <div class="grow"></div>
   <div class="elapsed" id="timer"></div>
   <button class="btn ghost" id="btnTour" title="新手引导">?</button>
@@ -69,6 +71,7 @@
     <section class="card grow">
       <h2>数据图层</h2>
       <div id="layerList" class="layers"></div>
+      <div id="centerList" class="centerlist"></div>
     </section>
   </aside>
 
@@ -91,14 +94,15 @@
     <div class="stage-foot">
       <div class="legendbar" id="legendBar"></div>
       <span class="lg-scale" id="legendScale"></span>
+      <span class="q" data-tip="色带左端、中间、右端对应的数值：当前专题图的最小值、中位数、最大值。价格专题的单位是元/㎡；残差专题显示高估/低估。">?</span>
       <span class="grow"></span>
       <span class="foot-legend" id="footLegend" hidden>
         <i class="sq over"></i>高估 <i class="sq under"></i>低估 <i class="sq none"></i>无成交
       </span>
       <span class="foot-legend" id="mapLegend">
         <i class="cdot l1"></i>市级中心地
-        <i class="cdot l2"></i>区级
-        <i class="cdot l3"></i>社区级
+        <i class="cdot l2"></i>区级中心地
+        <i class="cdot l3"></i>社区级中心地
         <i class="cline road"></i>路网
         <i class="cbox water"></i>水体
       </span>
@@ -110,7 +114,6 @@
   <aside class="col right">
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="model">估值模型</button>
-      <button class="tab" data-tab="diag">空间诊断</button>
       <button class="tab" data-tab="unit">单元详情</button>
         <button class="tab" data-tab="decomp">价格拆解</button>
       <button class="tab" data-tab="factor">因子设置</button>
@@ -132,7 +135,7 @@
       <h3>系数表 <span class="muted">对数尺度，正向为提价</span></h3>
       <div class="tablewrap">
         <table class="tbl" id="coefTbl">
-          <thead><tr><th>变量</th><th class="r">系数</th><th class="r">t 值</th><th class="r">p 值</th><th></th></tr></thead>
+          <thead><tr><th>变量</th><th class="r">系数</th><th class="r">t 值</th><th class="r">显著性</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -146,32 +149,6 @@
       </div>
     </div>
 
-    <div class="tabbody" id="tab-diag" hidden>
-        <div class="card">
-          <h2>街道校准表 <span class="unit">按街道残差均值修正估值，样本少的街道自动收缩</span></h2>
-          <table class="tbl" id="calibTbl"><thead><tr>
-            <th>街道</th><th class="r">样本</th><th class="r">原始偏差</th>
-            <th class="r">修正量</th><th class="r">可信度</th>
-          </tr></thead><tbody></tbody></table>
-        </div>
-
-        
-      <h3>残差空间自相关</h3>
-      <div class="moran" id="moranCard"></div>
-
-      <h3>系统性高估 / 低估板块</h3>
-      <div class="tablewrap">
-        <table class="tbl" id="distTbl">
-          <thead><tr><th>行政区</th><th class="r">残差均值</th><th class="r">样本</th><th>判定</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <h3>比率研究 <span class="muted">国际评估行业标准口径</span></h3>
-      <div class="metrics" id="ratioCard"></div>
-      <p class="note">比率＝估值÷成交价，按空间分块留出预测计算，属样本外口径。COD 越小表示估值越集中一致。</p>
-    </div>
-
     <div class="tabbody" id="tab-unit" hidden>
       <div class="empty" id="unitEmpty">在地图上点选一个单元</div>
       <div id="unitBody" hidden>
@@ -181,7 +158,7 @@
         </div>
         <div class="metrics" id="uMetrics"></div>
 
-        <h3>该单元的因子取值</h3>
+        <h3 id="uFactorTitle">该单元的因子取值</h3>
         <div class="tablewrap tall">
           <table class="tbl" id="uFactorTbl">
             <thead><tr><th>因子</th><th class="r">取值</th><th class="r">参与建模</th></tr></thead>
@@ -199,14 +176,16 @@
 
         <div id="decompBody" hidden>
           <div class="dec-head">
-            <div><b id="dcUnit"></b><span class="muted" id="dcMeta"></span></div>
+            <div><b id="dcUnit"></b><span class="muted" id="dcMeta"></span>
+              <span class="q" data-tip="局部拟合从 1,500 米开始；周边价格样本少于 120 套时，半径按 1.6 倍逐级扩大，直到凑够 120 套。这里显示的是本次实际用到的半径、样本数与局部 R²。局部 R² 只看周边样本，和全区 R² 不是同一口径。">?</span>
+            </div>
             <div class="dec-price">
               <label>待拆解价格</label>
               <input id="dcPrice" class="input" type="number" step="100">
               <span class="unit">元/㎡</span>
             </div>
             <div class="dec-actions">
-              <button class="btn small" id="dcUseObs">用成交价</button>
+              <button class="btn small" id="dcUseObs">用实际价格</button>
               <button class="btn small primary" id="dcRun">重新拆解</button>
             </div>
           </div>
@@ -214,31 +193,15 @@
           <div class="dec-sum">
             <div><span class="k">局部基准价</span><span class="v" id="dcBase"></span></div>
             <div><span class="k">因素加总</span><span class="v" id="dcModel"></span></div>
-            <div><span class="k">未解释</span><span class="v" id="dcUnexp"></span></div>
-            <div><span class="k">样本</span><span class="v" id="dcSample"></span></div>
+            <div><span class="k">未解释 <span class="q" data-tip="未解释 = 待拆解价格 − 各因素加总。它是价格里模型找不到因素依据的部分，常见来源是楼层、朝向、装修、房龄、业主急售。占比低说明定价主要由位置和配套决定；占比高说明还有重要信息没进模型。它按绝对值统计，与买卖谁占便宜无关。">?</span></span><span class="v" id="dcUnexp"></span></div>
+            <div><span class="k">价格样本</span><span class="v" id="dcSample"></span></div>
           </div>
           <div class="dec-quality" id="dcQuality"></div>
 
-          <details class="dec-help">
-            <summary>「未解释」是什么意思？占比高是好事还是坏事？</summary>
-            <div>
-              <p><b>定义：</b>未解释 = 待拆解价格 − 各因素加总。也就是这个价格里，
-                模型找不到因素依据的那一部分。</p>
-              <p><b>来源：</b>通常是楼层、朝向、装修、房龄、业主急售等没有进入模型的信息。</p>
-              <p><b>不是好坏，是"能解释多少"：</b></p>
-              <ul>
-                <li>占比低（&lt;15%）：这套房的定价基本由位置和配套决定，拆解结果更可靠。</li>
-                <li>占比高（&gt;30%）：还有重要信息没被纳入，此时应看置信区间，而不是只看点值。</li>
-              </ul>
-              <p><b>与买卖谁占便宜无关：</b>它按绝对值统计。你买得比模型价低，
-                表现为负的未解释；买得高，表现为正的未解释。两种都计入这个比例。</p>
-            </div>
-          </details>
-
-          <h3 class="sec">价格构成 <span class="muted small">勾掉你用不上的因素，下面的适配价会实时变化</span></h3>
+          <h3 class="sec">价格构成 <span class="muted small">调整每项支付意愿（50% = 市场平均），适配价实时变化</span></h3>
           <table class="tbl dec-tbl" id="dcTbl">
             <thead><tr>
-              <th style="width:64px">用得上</th><th>因素</th><th class="r">贡献 / 90%区间</th>
+              <th style="width:72px">支付意愿</th><th>因素</th><th class="r">贡献 / 90%区间</th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -274,6 +237,43 @@
     </div>
   </aside>
 </main>
+
+<!-- ── 全区空间诊断（区级口径，与单元详情分开） ── -->
+<div class="modal" id="diagModal" hidden>
+  <div class="dialog wide">
+    <div class="dlg-head">
+      <b>全区空间诊断</b>
+      <span class="muted">整区尺度的残差、校准与比率研究，不是单个地块的结果</span>
+      <button class="x" id="diagClose">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="diag-body">
+        <div class="card">
+          <h2>街道校准表 <span class="unit">按街道残差均值修正估值，样本少的街道自动收缩</span></h2>
+          <table class="tbl" id="calibTbl"><thead><tr>
+            <th>街道</th><th class="r">样本</th><th class="r">原始偏差</th>
+            <th class="r">修正量</th><th class="r">可信度 <span class="q" data-tip="可信度＝该街道样本量决定的收缩权重。样本少时修正量会被压向 0，避免小样本把估值带偏。">?</span></th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+
+        <h3>残差空间自相关 <span class="q" data-tip="Moran's I 衡量残差在空间上是否聚集。接近 0 表示误差随机；显著大于 0 表示成片高估或低估，说明还有地理因素没进模型。">?</span></h3>
+        <div class="moran" id="moranCard"></div>
+
+        <h3>系统性高估 / 低估板块 <span class="q" data-tip="按街道汇总残差均值。残差为正表示模型低估（实际价格更高），为负表示模型高估。用于定位需要人工复核的片区。">?</span></h3>
+        <div class="tablewrap">
+          <table class="tbl" id="distTbl">
+            <thead><tr><th>行政区</th><th class="r">残差均值</th><th class="r">样本</th><th>判定</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3>比率研究 <span class="muted">国际评估行业标准口径</span></h3>
+        <div class="metrics" id="ratioCard"></div>
+        <p class="note">比率＝估值÷成交价，按空间分块留出预测计算，属样本外口径。COD 越小表示估值越集中一致。</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── 导入数据 ── -->
 <div class="modal" id="importModal" hidden>
@@ -386,6 +386,7 @@
   </div>
 </div>
 
+<div class="help-tip" id="helpTip" hidden></div>
 <div class="toast" id="toast"></div>
 <script src="/static/app.js"></script>
 <script src="/static/intake.js"></script>

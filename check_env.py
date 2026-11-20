@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """部署前环境自检：确认依赖齐全、模块可导入、数据包可加载。
 
 用法：python check_env.py [数据包路径]

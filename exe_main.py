@@ -219,9 +219,10 @@ def main() -> int:
     ddir = os.path.join(base, "data", "districts")
     if os.path.isdir(ddir) and any(f.endswith(".bundle") for f in os.listdir(ddir)):
         log("           内置多区模式：%d 个区" % len([f for f in os.listdir(ddir) if f.endswith(".bundle")]))
-        sys.argv = [sys.argv[0], "--districts", ddir, "--port", str(port)]
+        # exe_main 已经负责唤起浏览器；给 run_web 传 --no-open，避免开两个标签页。
+        sys.argv = [sys.argv[0], "--districts", ddir, "--port", str(port), "--no-open"]
     else:
-        sys.argv = [sys.argv[0], "--bundle", bundle, "--port", str(port)]
+        sys.argv = [sys.argv[0], "--bundle", bundle, "--port", str(port), "--no-open"]
     from run_web import main as web_main
 
     try:

@@ -53,12 +53,13 @@ class _MoranView:
 
 
 _USE_HINT = (
+    ("商业/工业", ("商业/工业", "商业工业", "工业地块")),
     ("学校", ("幼儿园", "小学", "中学", "学校", "大学", "学院", "附中", "附小")),
     ("公园", ("公园", "绿地", "植物园", "动物园")),
     ("医院", ("医院", "卫生院", "卫生中心", "保健院")),
     ("商业", ("商业", "广场", "商场", "大厦", "百货", "商城")),
     ("办公", ("办事处", "街道办", "政府", "委员会", "管理中心", "行政")),
-    ("产业", ("公司", "集团", "厂", "基地", "园区", "产业园", "仓库")),
+    ("产业", ("公司", "集团", "厂", "基地", "园区", "产业园", "仓库", "工业", "厂房", "车间", "仓储", "物流")),
     ("交通", ("车站", "地铁", "机场", "码头", "车辆段", "停车场")),
     ("文体", ("体育", "文化", "图书馆", "剧院", "音乐厅", "美术馆")),
     ("宗教", ("寺", "庙", "教堂", "道观")),
@@ -365,6 +366,33 @@ class AppState:
             })
         return out
 
+    def _basemap_payload(self) -> Dict:
+        """底图 + 点图层坐标。
+
+        道路/水体/中心地原本就在 ds.basemap 里；地铁、商业、公交、学校等
+        点图层只存在 ds.layers 中，前端没有坐标就画不出来，所以在这里统一
+        打包成 {id, name, xy}，供「数据图层」勾选叠加。
+        """
+        bm = dict(getattr(self.ds, "basemap", {}) or {})
+        pts = []
+        for lid, lyr in (getattr(self.ds, "layers", {}) or {}).items():
+            if getattr(lyr, "layer_type", "") != "point":
+                continue
+            xs = getattr(lyr, "x", None)
+            ys = getattr(lyr, "y", None)
+            if xs is None or ys is None or len(xs) == 0:
+                continue
+            name = ((lyr.aux_meta or {}).get("display_name")
+                    or _layer_cn(lid, "point"))
+            pts.append({
+                "id": lid,
+                "name": str(name),
+                "xy": [[round(float(a), 1), round(float(b), 1)]
+                       for a, b in zip(xs, ys)],
+            })
+        bm["points"] = pts
+        return bm
+
     def bootstrap(self) -> Dict:
         if getattr(self, "ds", None) is None:
             return {"need_select": True, "districts": self.districts,
@@ -379,6 +407,7 @@ class AppState:
         _unames = getattr(self.ds.units, "name", None)
 
         return {
+            "district": getattr(self, "current", None),
             "project": {
                 "name": self.ds.project_name,
                 "crs": self.ds.crs,
@@ -432,7 +461,7 @@ class AppState:
                 "area": _num(u.area, 0),
             },
             "has_obs": [bool(v) for v in np.isin(np.arange(self.ds.n_units), self.ds.obs.unit_idx)],
-            "basemap": getattr(self.ds, "basemap", {}) or {},
+            "basemap": self._basemap_payload(),
             "result": self.result,
         }
 
@@ -977,18 +1006,14 @@ class AppState:
 
 
 def _extent_with_basemap(u, bm) -> list:
-    """地图范围要把底图一起包进来，否则村界/道路会画到画布外。"""
-    ext = [float(u.x.min()), float(u.y.min()), float(u.x.max()), float(u.y.max())]
-    xs, ys = [], []
-    for flat in (bm.get('boundaries') or []) + (bm.get('roads') or []):
-        xs.extend(flat[0::2])
-        ys.extend(flat[1::2])
-    for c in bm.get('centers') or []:
-        xs.append(c['x'])
-        ys.append(c['y'])
-    if xs:
-        ext = [min(ext[0], min(xs)), min(ext[1], min(ys)), max(ext[2], max(xs)), max(ext[3], max(ys))]
-    return ext
+    """地图视野：本区单元范围 + 1 km 外扩。
+
+    不再把 2.5 km 缓冲内的邻区道路/水体全部包进来，否则静安区地图会
+    显示到浦东的细节。底图仍按视野裁剪绘制，区外 1 km 只作地理参照。
+    """
+    m = 1000.0
+    return [float(u.x.min()) - m, float(u.y.min()) - m,
+            float(u.x.max()) + m, float(u.y.max()) + m]
 
 
 def _layer_cn(lid: str, kind: str) -> str:

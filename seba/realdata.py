@@ -167,11 +167,14 @@ RAIL_EXCLUDE = ("火车站", "虹桥站", "上海站", "上海南站", "上海�
 RES_MIN_SHARE = 0.30   # 居住用地占比低于此值且名称非居委时，判为非住宅单元
 
 # 名称明显属于非住宅用途的关键词（公园、商业、学校、办公等）
+# 「地块」单独列出：村界数据里有一批「商业/工业地块（五）」这类单元，
+# 名称不含“商业/工业”以外的设施词，但显然是经营性用地，不能当住宅。
 _NONRES_NAME = re.compile(
     "公园|学校|大学|中学|小学|幼儿园|医院|公司|集团|基地|广场|办事处|街道办|"
     "政府|车站|机场|市场|陵园|公墓|寺|庙|产业园|工业园|园区|商场|商厦|大厦$|"
+    "商业|工业|办公|商务|研发|仓储|物流|厂房|车间|地块|楼宇|"
     "客运站|地铁|车辆段|水厂|电厂|变电")
-# 名称属于居委/村委会的
+# 名称属于居委/村委会的（优先于上面的泛化关键词，避免“交通公园居委”被误判）
 _JW_NAME = re.compile("居委|居委会|村委会|村委|居民区|社区")
 ROAD_TRUNK = {"motorway", "trunk", "primary", "motorway_link", "trunk_link", "primary_link"}
 ROAD_SECOND = {"secondary", "tertiary", "secondary_link", "tertiary_link"}
@@ -1158,11 +1161,13 @@ def build_district_dataset(
     is_res = np.ones(len(ids), dtype=bool)
     _why = []
     for _i, _nm in enumerate(_names_arr):
-        if _NONRES_NAME.search(_nm):
+        if _JW_NAME.search(_nm):
+            # 居委/村委会是住宅单元的强信号；即使名字里带“公园”“商业”等词，
+            # 也优先按住宅处理（例如“交通公园居委”）。
+            is_res[_i] = True
+        elif _NONRES_NAME.search(_nm):
             is_res[_i] = False
             _why.append("名称")
-        elif _JW_NAME.search(_nm):
-            is_res[_i] = True
         else:
             is_res[_i] = bool(f_res[_i] >= RES_MIN_SHARE)
     units.use_type = np.where(is_res, "住宅", "非住宅")
@@ -1312,12 +1317,47 @@ def build_district_dataset(
     except Exception:
         pass
 
-    if cf is not None:
-        m2 = 8000.0
-        bm["centers"] = [{"x": round(c.x, 1), "y": round(c.y, 1), "level": c.level,
-                          "name": c.name or ""}
-                         for c in cf.centers
-                         if x0 - m2 < c.x < x1 + m2 and y0 - m2 < c.y < y1 + m2]
+    # 展示用中心地：全市 NMS（1.2 km）会把跨区界的商业簇合并到邻区
+    # （静安寺与陕西南路只隔约 350 m，中心点被判到区界以南），单区地图上
+    # 就会一个中心地都看不到。这里用本区周边 3 km 的商业点再识别一次，
+    # 只保留落在区界内的中心，供底图标注；模型里的可达性因子仍用全市
+    # 中心地，两者口径不同。
+    bm["centers"] = []
+    if "shop" in poi_xy and poi_xy["shop"][0].size:
+        try:
+            lcf = detect_centers(
+                poi_xy["shop"][0], poi_xy["shop"][1],
+                np.array([""] * poi_xy["shop"][0].size, dtype=object),
+                bandwidth_m=600.0, nms_m=600.0, min_poi_1km=4,
+                merge_m=600.0, names=ref)
+
+            def _inside(px: float, py: float) -> bool:
+                for rings in rings_all:
+                    if rings and points_in_rings(
+                            np.array([px]), np.array([py]), [rings[0]])[0]:
+                        return True
+                return False
+
+            kept = [c for c in lcf.centers if _inside(c.x, c.y)]
+            kept.sort(key=lambda c: -c.score)
+            kept = kept[:12]
+            for i, c in enumerate(kept):
+                lvl = 2 if i == 0 else 3
+                if cf is not None:
+                    near = [k.level for k in cf.centers
+                            if math.hypot(k.x - c.x, k.y - c.y) <= 1500.0]
+                    if near:
+                        lvl = min(near)
+                # 最近地铁超过 1.2 km 时不署名，避免把邻站名字贴到别的商圈上
+                nm = c.name or ""
+                if nm and ref:
+                    if min(math.hypot(m[0] - c.x, m[1] - c.y) for m in ref) > 1200.0:
+                        nm = ""
+                bm["centers"].append({
+                    "x": round(c.x, 1), "y": round(c.y, 1),
+                    "level": lvl, "name": nm, "src": "local"})
+        except Exception:
+            bm["centers"] = []
     ds.basemap = bm
 
     if _src.startswith("合成"):

@@ -74,23 +74,24 @@ def collect():
 
 def setup(wid):
     s = wid.sections[0]
-    s.page_width = Cm(21.0)
-    s.page_height = Cm(29.7)
-    s.top_margin = Cm(2.0)
-    s.bottom_margin = Cm(1.9)
-    s.left_margin = Cm(2.1)
-    s.right_margin = Cm(1.8)
-    s.header_distance = Cm(1.0)
+    # 横向 A4：源代码行较长，纵向 8pt 会大量折行，导致 60 页变成 61 页
+    s.page_width = Cm(29.7)
+    s.page_height = Cm(21.0)
+    s.top_margin = Cm(1.2)
+    s.bottom_margin = Cm(1.1)
+    s.left_margin = Cm(1.0)
+    s.right_margin = Cm(1.0)
+    s.header_distance = Cm(0.8)
 
     st = wid.styles["Normal"]
     st.font.name = "Consolas"
-    st.font.size = Pt(8)
+    st.font.size = Pt(6)
     st.element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
     pf = st.paragraph_format
     pf.space_before = Pt(0)
     pf.space_after = Pt(0)
     pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
-    pf.line_spacing = Pt(13.0)
+    pf.line_spacing = Pt(9.6)
 
     hp = s.header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -130,8 +131,8 @@ def main() -> int:
     doc = Document()
     setup(doc)
     end1 = emit(doc, head, 1)
-    # 前后两段之间分页
-    doc.paragraphs[-1].add_run().add_break(WD_BREAK.PAGE)
+    # 前 1500 行正好排满 30 页，下一行自然从第 31 页开始；
+    # 这里不再手动加页码分隔，否则会多出一张空白页（31 + 30 = 61 页）。
     emit(doc, tail, n - need + 1 if n >= need else len(head) + 1)
 
     doc.save(OUT)

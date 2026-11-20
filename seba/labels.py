@@ -130,11 +130,15 @@ FACTOR_CN: Dict[str, str] = {
 
 
 def factor_name(code: str, note: str = "") -> str:
-    """因子中文名：优先查词表，其次用配置里的中文备注，最后回落代码。"""
+    """因子中文名：优先查词表，其次用配置里的中文备注，最后回落代码。
+
+    备注里的括号说明（如「市级1.0/区级0.55/社区0.25」）是因子语义的一部分，
+    不能截断成「中心地加权可达性（市级1.0/区」，界面与导出都保留完整名称。
+    """
     if code in FACTOR_CN:
         return FACTOR_CN[code]
     if note:
-        return note if len(note) <= 16 else note[:16]
+        return note if len(note) <= 48 else note[:48]
     return code
 
 

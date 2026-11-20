@@ -237,7 +237,7 @@ def center_gravity(
     level_w: Optional[Dict[int, float]] = None,
 ) -> np.ndarray:
     """A_i = Σ_k w_k · exp(-β · t_ik)；t 为到最近该级别中心地的时间（分钟）。"""
-    level_w = level_w or {1: 1.0, 2: 0.55, 3: 0.25}
+    level_w = level_w or {1: 1.0, 2: 0.50, 3: 0.25}
     out = np.zeros_like(next(iter(unit_times.values())), dtype=float)
     for lvl, t in unit_times.items():
         tt = np.where(np.isfinite(t), t, 999.0)

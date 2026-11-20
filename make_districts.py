@@ -34,7 +34,17 @@ def main() -> int:
     cfg_path = os.path.join(HERE, "config", "factors_real.yaml")
 
     targets = [d for d, _ in list_districts()]
+    sel = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if sel:
+        targets = [d for d in targets if d in sel]
+    index_path = os.path.join(OUT, "_index.json")
     index = []
+    if sel and os.path.exists(index_path):
+        try:
+            with open(index_path, encoding="utf-8") as fh:
+                index = json.load(fh)
+        except Exception:
+            index = []
     t_all = time.time()
 
     for i, d in enumerate(targets, 1):
@@ -64,12 +74,13 @@ def main() -> int:
             path = os.path.join(OUT, "%s.bundle" % d)
             save_bundle(ds, path, rep.notes, {"district": d}, slim=True)
             mb = os.path.getsize(path) / 1048576
-            index.append({
+            row = {
                 "name": d, "units": ds.n_units, "obs": ds.n_obs(),
                 "r2": round(float(b.train_metrics["r2"]), 3),
                 "cv": round(float(b.cv_spatial["r2"]), 3),
                 "mb": round(mb, 2),
-            })
+            }
+            index = [x for x in index if x.get("name") != d] + [row]
             print("[%2d/%d] %-6s %4d 单元 %4d 成交  R²=%.3f  %.1f MB  %.0fs"
                   % (i, len(targets), d, ds.n_units, ds.n_obs(),
                      b.train_metrics["r2"], mb, time.time() - t0), flush=True)
