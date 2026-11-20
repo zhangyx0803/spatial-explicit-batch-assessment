@@ -15,7 +15,7 @@ import time
 import traceback
 import webbrowser
 
-APP = "空间显式批量评估工作台 V1.0"
+APP = "空间显式批量评估工作台系统 V1.0"
 
 
 def _fix_console() -> None:

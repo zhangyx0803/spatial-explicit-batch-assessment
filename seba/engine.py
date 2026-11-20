@@ -151,6 +151,13 @@ class FactorEngine:
         rows = []
         for code, arr in self.ds.attrs.items():
             f = self.cfg.factor(code)
+            # 该因子主要输入对应的图层版本，便于追溯「用的是哪一版图」
+            layer_ver = "—"
+            for _k, _v in (f.inputs or {}).items():
+                _lay = self.ds.layers.get(str(_v))
+                if _lay is not None and getattr(_lay, "version", None):
+                    layer_ver = str(_lay.version)
+                    break
             rows.append(
                 pd.DataFrame(
                     {
@@ -158,6 +165,7 @@ class FactorEngine:
                         "factor_code": code,
                         "value": arr,
                         "source": f.op,
+                        "layer_version": layer_ver,
                         "run_id": run_id,
                         "asof_date": self.ds.units.asof_date,
                     }

@@ -374,8 +374,10 @@ class AppState:
                 "largest_share": float(meta.get("largest_component_share", 0.0)),
                 "deadend": int(meta.get("n_deadend_nodes", 0)),
                 "oneway_share": float(meta.get("oneway_share", 0.0)),
-                "snap_fail": self.rep.snap_failures.get("road_net", 0.0) if self.rep else 0.0,
-                "snap_mean_dist": self.rep.snap_mean_dist.get("road_net", 0.0) if self.rep else 0.0,
+                "snap_fail": (self.rep.snap_failures.get("road_net", 0.0)
+                              if self.rep else None),
+                "snap_mean_dist": (self.rep.snap_mean_dist.get("road_net", 0.0)
+                                   if self.rep else None),
             },
             "catalog": catalog(),
             "factors": self.factor_stats(),
@@ -836,8 +838,16 @@ class AppState:
             ["随机 K 折 CV"] + [m["cv_random"][k] for k in ("r2", "rmse_log", "mae_log", "mape", "medape")],
             ["空间分块 CV"] + [m["cv_spatial"][k] for k in ("r2", "rmse_log", "mae_log", "mape", "medape")],
         ], columns=["口径", "R2", "RMSE_log", "MAE_log", "MAPE", "MedAPE"])
-        run_df = pd.DataFrame(self.rep.as_rows() if self.rep else [],
-                          columns=["因子", "算子", "缓存", "耗时(s)", "输出"])
+        if self.rep:
+            run_df = pd.DataFrame(self.rep.as_rows(),
+                                  columns=["因子", "算子", "缓存", "耗时(s)", "输出"])
+        else:
+            # 内置数据包不含运行时报告，这里输出因子清单与算子对应关系，
+            # 耗时/缓存留空，避免出现一张只有表头的空表
+            run_df = pd.DataFrame(
+                [[s["code"], s["op_name"], "内置数据包（无运行记录）", "—",
+                  s.get("note") or ""] for s in self.factor_stats()],
+                columns=["因子", "算子", "缓存", "耗时(s)", "输出"])
         diag_df = pd.DataFrame([
             ["Moran's I", res["moran"]["i"]], ["E[I]", res["moran"]["e"]],
             ["z", res["moran"]["z"]], ["p", res["moran"]["p"]],
@@ -875,8 +885,10 @@ class AppState:
             "n_obs": ds.n_obs(),
             "asof_date": ds.units.asof_date,
             "cell_area": ds.grid.area,
-            "snap_failed": self.rep.snap_failures.get("road_net", 0.0) if self.rep else 0.0,
-            "snap_mean_dist": self.rep.snap_mean_dist.get("road_net", 0.0) if self.rep else 0.0,
+            "snap_failed": (self.rep.snap_failures.get("road_net", 0.0)
+                            if self.rep else None),
+            "snap_mean_dist": (self.rep.snap_mean_dist.get("road_net", 0.0)
+                               if self.rep else None),
             "factor_rows": factor_rows,
             "smearing": m["smearing"],
             "coef_rows": res["coef"],

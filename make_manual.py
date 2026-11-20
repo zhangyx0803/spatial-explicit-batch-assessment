@@ -120,7 +120,7 @@ def TBL(header, rows, widths=None, font=9):
 
 # ============================ 封面 ============================
 for txt, size, bold, color in (
-    ("空间显式批量评估工作台 V1.0", 22, True, RGBColor(0x1F, 0x38, 0x64)),
+    ("空间显式批量评估工作台系统 V1.0", 22, True, RGBColor(0x1F, 0x38, 0x64)),
     ("用户操作说明书", 16, True, None),
     ("SEBA — Spatial Explicit Batch Assessment", 10, False, RGBColor(0x60, 0x60, 0x60)),
 ):

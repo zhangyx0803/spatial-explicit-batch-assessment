@@ -39,7 +39,7 @@ from seba.webapp import serve  # noqa: E402
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="空间显式批量评估工作台 · Web 可视化版")
+    ap = argparse.ArgumentParser(description="空间显式批量评估工作台系统 · Web 可视化版")
     ap.add_argument("--config", default=os.path.join("config", "factors.yaml"))
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)

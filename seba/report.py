@@ -99,8 +99,10 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
             ("成交样本数", format(ctx["n_obs"], ",")),
             ("数据时点", ctx["asof_date"]),
             ("单元面积", "%.0f m²" % ctx["cell_area"]),
-            ("吸附失败率", "%.2f%%" % (ctx["snap_failed"] * 100)),
-            ("平均吸附距离", "%.1f m" % ctx["snap_mean_dist"]),
+            ("吸附失败率", "—" if ctx.get("snap_failed") is None
+             else "%.2f%%" % (ctx["snap_failed"] * 100)),
+            ("平均吸附距离", "—" if ctx.get("snap_mean_dist") is None
+             else "%.1f m" % ctx["snap_mean_dist"]),
         ],
     )
 

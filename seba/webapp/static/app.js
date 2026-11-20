@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================================
-   空间显式批量评估工作台 V1.0 —— 前端
+   空间显式批量评估工作台系统 V1.0 —— 前端
    界面全中文；技术标识（英文代码）只在次要位置小字提示。
    ========================================================================= */
 
@@ -541,8 +541,8 @@ function renderMeta() {
     ['坐标系', p.crs],
     ['路网节点', NF.format(n.n_nodes)],
     ['连通分量', NF.format(n.n_components)],
-    ['吸附失败率', pct(n.snap_fail, 2)],
-    ['平均吸附距离', `${num(n.snap_mean_dist, 0)} 米`],
+    ['吸附失败率', n.snap_fail == null ? '—（内置数据包无运行记录）' : pct(n.snap_fail, 2)],
+    ['平均吸附距离', n.snap_mean_dist == null ? '—' : `${num(n.snap_mean_dist, 0)} 米`],
     ['因子数量', NF.format(b.factors.length)],
   ];
   $('metaList').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
