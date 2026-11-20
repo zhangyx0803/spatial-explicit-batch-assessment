@@ -1113,12 +1113,11 @@ $('map').addEventListener('mousemove', (ev) => {
   const op = (_a.obs_price || [])[k];
   const est = (_a.est_median || [])[k];
   if (op !== null && op !== undefined) {
-    showTip(ev, `${nm} ｜ 成交 ${price(op)} 元/㎡`
-      + (est !== null && est !== undefined ? ` ｜ 估值 ${price(est)}` : ''));
+    showTip(ev, `${nm} ｜ ${price(op)} 元/㎡（成交）`);
     return;
   }
-  showTip(ev, (est === null || est === undefined) ? `${nm} ｜ 无成交`
-    : `${nm} ｜ 估值 ${price(est)} 元/㎡`);
+  showTip(ev, (est === null || est === undefined) ? `${nm} ｜ 无成交、无估值`
+    : `${nm} ｜ ${price(est)} 元/㎡（估值）`);
 });
 $('map').addEventListener('mouseleave', () => { $('tip').hidden = true; });
 $('map').addEventListener('click', (ev) => {
