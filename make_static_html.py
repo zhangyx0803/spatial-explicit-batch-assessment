@@ -676,6 +676,11 @@ build(); draw();
 """
 
 
+def _short_name(v):
+    """项目名去掉「 · 真实地理 + 价格锚定」这类后缀，页面上只显示区名。"""
+    return str(v or "").split(" · ")[0]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bundle", default=os.path.join(HERE, "data", "demo_xuhui.bundle"))

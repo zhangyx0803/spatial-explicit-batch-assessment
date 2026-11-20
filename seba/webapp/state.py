@@ -52,6 +52,30 @@ class _MoranView:
         return self._v
 
 
+_USE_HINT = (
+    ("学校", ("幼儿园", "小学", "中学", "学校", "大学", "学院", "附中", "附小")),
+    ("公园", ("公园", "绿地", "植物园", "动物园")),
+    ("医院", ("医院", "卫生院", "卫生中心", "保健院")),
+    ("商业", ("商业", "广场", "商场", "大厦", "百货", "商城")),
+    ("办公", ("办事处", "街道办", "政府", "委员会", "管理中心", "行政")),
+    ("产业", ("公司", "集团", "厂", "基地", "园区", "产业园", "仓库")),
+    ("交通", ("车站", "地铁", "机场", "码头", "车辆段", "停车场")),
+    ("文体", ("体育", "文化", "图书馆", "剧院", "音乐厅", "美术馆")),
+    ("宗教", ("寺", "庙", "教堂", "道观")),
+)
+
+
+def _use_detail(name: str, use_type: str) -> str:
+    """把「非住宅」细化为学校 / 公园 / 商业 / 办公 等，便于阅读。"""
+    if str(use_type) == "住宅":
+        return "住宅"
+    n = str(name or "")
+    for label, keys in _USE_HINT:
+        if any(k in n for k in keys):
+            return label
+    return "非住宅"
+
+
 class AppState:
     def __init__(self, cfg_path: str, dataset=None, notes=None, source: str = "demo",
                  prebuilt: bool = False, districts_dir: str = None):
@@ -348,6 +372,12 @@ class AppState:
         net = self.ds.layers["road_net"]
         meta = net.aux_meta or {}
         u = self.ds.units
+        # 单元用途（住宅 / 非住宅），供前端区分是否显示价格
+        _ut = getattr(self.ds.units, "use_type", None)
+        _utypes = ([str(x) for x in _ut] if _ut is not None
+                   else ["住宅"] * self.ds.n_units)
+        _unames = getattr(self.ds.units, "name", None)
+
         return {
             "project": {
                 "name": self.ds.project_name,
@@ -368,12 +398,17 @@ class AppState:
                 "extent": _extent_with_basemap(u, getattr(self.ds, "basemap", {}) or {}),
             },
             "network": {
-                "n_nodes": int(net.nodes.shape[0]) if getattr(net, "nodes", None) is not None
-                else int(meta.get("n_nodes", 0)),
-                "n_components": int(meta.get("n_components", 0)),
-                "largest_share": float(meta.get("largest_component_share", 0.0)),
-                "deadend": int(meta.get("n_deadend_nodes", 0)),
-                "oneway_share": float(meta.get("oneway_share", 0.0)),
+                "n_nodes": (int(net.nodes.shape[0])
+                            if getattr(net, "nodes", None) is not None
+                            else (int(meta["n_nodes"]) if meta.get("n_nodes") else None)),
+                "n_components": (int(meta["n_components"])
+                                 if meta.get("n_components") else None),
+                "largest_share": (float(meta["largest_component_share"])
+                                  if meta.get("largest_component_share") else None),
+                "deadend": (int(meta["n_deadend_nodes"])
+                            if meta.get("n_deadend_nodes") else None),
+                "oneway_share": (float(meta["oneway_share"])
+                                 if meta.get("oneway_share") else None),
                 "snap_fail": (self.rep.snap_failures.get("road_net", 0.0)
                               if self.rep else None),
                 "snap_mean_dist": (self.rep.snap_mean_dist.get("road_net", 0.0)
@@ -390,10 +425,10 @@ class AppState:
                 "admin": u.admin_code.tolist(),
                 "name": [str(x) for x in (
                     getattr(u, "name", None) if getattr(u, "name", None) is not None else u.unit_id)],
-                "use_type": [str(x) for x in (
-                    getattr(u, "use_type", None)
-                    if getattr(u, "use_type", None) is not None
-                    else ["住宅"] * self.ds.n_units)],
+                "use_type": _utypes,
+                "use_detail": [_use_detail(
+                    str(u.name[i]) if getattr(u, "name", None) is not None else "",
+                    _utypes[i]) for i in range(self.ds.n_units)],
                 "area": _num(u.area, 0),
             },
             "has_obs": [bool(v) for v in np.isin(np.arange(self.ds.n_units), self.ds.obs.unit_idx)],
@@ -415,6 +450,21 @@ class AppState:
     def decompose_unit(self, idx: int, price=None, radius=1500.0, min_n=60) -> Dict:
         """价格拆解 + 个性化适配所需的数据。"""
         from ..decompose import BUYER_HINT, decompose as _dec
+
+        # 非住宅单元（学校、公园、商业、办公等）没有住宅价格，不能做价格拆解。
+        # 否则模型会拿周边住宅样本外推一个「价格」，看起来像真的。
+        _ut = getattr(self.ds.units, "use_type", None)
+        if _ut is not None and str(_ut[int(idx)]) != "住宅":
+            _nm = ""
+            _names_attr = getattr(self.ds.units, "name", None)
+            if _names_attr is not None:
+                _nm = str(_names_attr[int(idx)])
+            return {
+                "blocked": True,
+                "use_type": str(_ut[int(idx)]),
+                "unit_name": _nm,
+                "reason": "该单元为%s用地，没有住宅价格，不参与估值与价格拆解" % str(_ut[int(idx)]),
+            }
 
         feats = [c for c in (self.cfg.model.get("features") or []) if c in self.ds.attrs]
         if not feats:
@@ -478,6 +528,9 @@ class AppState:
             "admin": str(u.admin_code[idx]),
             "unit_name": (str(u.name[idx]) if getattr(u, "name", None) is not None else ""),
             "use_type": (str(u.use_type[idx]) if getattr(u, "use_type", None) is not None else "住宅"),
+            "use_detail": _use_detail(
+                (str(u.name[idx]) if getattr(u, "name", None) is not None else ""),
+                (str(u.use_type[idx]) if getattr(u, "use_type", None) is not None else "住宅")),
             "area": float(u.area[idx]),
             "population": float(u.population[idx]),
             "est_median": a["est_median"][idx],

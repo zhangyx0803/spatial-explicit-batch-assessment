@@ -1219,7 +1219,7 @@ def build_district_dataset(
         grid=grid, units=units, obs=obs,
         layers=layers,
         crs="本地平面坐标（米）",
-        project_name="%s · 真实地理 + 价格锚定" % (district or "上海全市"),
+        project_name=(district or "上海全市"),
         unit_attrs={
             "green_share": f_green,
             "water_share": f_water,

@@ -246,18 +246,6 @@ function drawMap0() {
   const clipPath = districtClipPath(bm, units);
   if (clipPath) { ctx.save(); ctx.clip(clipPath); }
 
-  // 水体：先铺底，江河水系是最有效的「这是哪儿」视觉锚点
-  if (bm.water && bm.water.length) {
-    ctx.fillStyle = '#dce8f2';
-    ctx.beginPath();
-    for (const flat of bm.water) {
-      if (!flat || flat.length < 6) continue;
-      ctx.moveTo(X(flat[0]), Y(flat[1]));
-      for (let i = 2; i < flat.length; i += 2) ctx.lineTo(X(flat[i]), Y(flat[i + 1]));
-      ctx.closePath();
-    }
-    ctx.fill();
-  }
 
   const usePoly = bm.unit_polys && bm.unit_polys.length === units.x.length;
   const mode = S.geom || (usePoly ? 'poly' : 'dot');
@@ -357,20 +345,40 @@ function drawMap0() {
   const grad = p.div ? DIV : SEQ;
   $('legendBar').style.background = `linear-gradient(90deg,${grad.join(',')})`;
   $('legendScale').textContent = p.div
-    ? `${brief(-hi)} · 0 · ${brief(hi)}`
-    : `${brief(lo)} · ${brief(mid)} · ${brief(hi)}`;
+    ? `${brief(-hi)}　0　${brief(hi)}`
+    : `${brief(lo)}　${brief(mid)}　${brief(hi)}`;
   $('footLegend').hidden = !p.div;
   $('stageStat').textContent = nv
-    ? `样本 ${NF.format(nv)}　中位 ${p.price ? price(mid) : brief(mid)}　P98 ${p.price ? price(hi) : brief(hi)}`
+    ? `有价格的${p.price ? '地块' : '样本'} ${NF.format(nv)} 个　`
+      + `估值中位 ${p.price ? price(mid) + ' 元/㎡' : brief(mid)}　`
+      + `高低区间 ${p.price ? price(lo) + '–' + price(hi) : brief(lo) + '–' + brief(hi)}`
     : '';
   const bmFoot = (S.boot.basemap || {});
   $('footInfo').textContent =
-    `单元 ${S.boot.project.n_units} · 道路 ${(bmFoot.roads || []).length} · 水体 ${(bmFoot.water || []).length} · 中心地 ${(bmFoot.centers || []).length} · ${S.result.features.length} 因子`;
+    `地块 ${S.boot.project.n_units} 个　道路 ${(bmFoot.roads || []).length} 段　`
+    + `水体 ${(bmFoot.water || []).length} 处　中心地 ${(bmFoot.centers || []).length} 个　`
+    + `参与建模的因子 ${S.result.features.length} 个`;
 }
 
 /* ---- 底图：路网 + 单元轮廓 + 中心地 ---- */
 function drawBasemap(ctx, s, g) {
-  const bm = S.boot && S.boot.basemap;
+  const bm = (S.boot && S.boot.basemap) || {};
+  // 水体：画在地块填色之上，否则会被色块盖住，河道完全看不见
+  if (bm.water && bm.water.length) {
+    ctx.fillStyle = '#cfe0ee';
+    ctx.strokeStyle = '#a8c4dc';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (const flat of bm.water) {
+      if (!flat || flat.length < 6) continue;
+      ctx.moveTo(X(flat[0]), Y(flat[1]));
+      for (let i = 2; i < flat.length; i += 2) ctx.lineTo(X(flat[i]), Y(flat[i + 1]));
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.stroke();
+  }
+
   if (!bm) return;
 
   // 全路网：细线叠加在色块上，既保留地理骨架又不压配色
@@ -413,6 +421,15 @@ function drawBasemap(ctx, s, g) {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1.3;
       ctx.stroke();
+      // 一二级中心地标名，否则只看到几个小圆点，不知道是什么
+      if (c.level <= 2 && c.name) {
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(40,40,40,.82)';
+        ctx.strokeStyle = 'rgba(255,255,255,.9)';
+        ctx.lineWidth = 2.4;
+        ctx.strokeText(c.name, X(c.x) + r + 3, Y(c.y) + 3);
+        ctx.fillText(c.name, X(c.x) + r + 3, Y(c.y) + 3);
+      }
     }
   }
 }
@@ -537,16 +554,16 @@ function renderMeta() {
     ['评估单元', NF.format(p.n_units)],
     ['成交样本', NF.format(p.n_obs)],
     ['单元尺寸', `${num(p.cell, 0)} 米`],
-    ['数据来源', p.source === 'user' ? '我的数据' : '演示数据'],
-    ['坐标系', p.crs],
-    ['路网节点', NF.format(n.n_nodes)],
-    ['连通分量', NF.format(n.n_components)],
+    ['数据来源', p.source === 'user' ? '我的数据' : '内置上海 2024 数据'],
+    ['坐标系', 'WGS84 经纬度，按本区原点局部投影（米）'],
+    ['路网节点', n.n_nodes == null ? '—' : NF.format(n.n_nodes)],
+    ['连通分量', n.n_components == null ? '—' : NF.format(n.n_components)],
     ['吸附失败率', n.snap_fail == null ? '—（内置数据包无运行记录）' : pct(n.snap_fail, 2)],
     ['平均吸附距离', n.snap_mean_dist == null ? '—' : `${num(n.snap_mean_dist, 0)} 米`],
     ['因子数量', NF.format(b.factors.length)],
   ];
   $('metaList').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('projName').textContent = `${p.name} · 运行 ${p.run_id}`;
+  $('projName').textContent = String(p.name || '').split(' · ')[0];
 }
 
 function renderFieldSelect() {
@@ -679,22 +696,28 @@ async function showUnit(idx) {
     $('unitEmpty').hidden = true;
     $('unitBody').hidden = false;
     $('uId').textContent = u.unit_name || u.unit_id;
-    $('uAdmin').textContent = `${u.admin} · ${u.unit_id} · ${num(u.area, 0)} ㎡`;
+    const _useTxt = u.use_detail || (u.use_type === '住宅' ? '住宅' : '非住宅');
+    $('uAdmin').innerHTML =
+      `<span class="kv"><i>用途</i><b>${_useTxt}</b></span>`
+      + `<span class="kv"><i>所属街道</i><b>${u.admin || '—'}</b></span>`
+      + `<span class="kv"><i>占地面积</i><b>${num(u.area, 0)} ㎡</b></span>`;
 
     const gTxt = { ok: '可直接用', warn: '建议复核', bad: '需人工核', unknown: '—' }[u.grade] || '—';
     const gCls = { ok: 'ok', warn: 'mid', bad: 'bad' }[u.grade] || 'mid';
     const nonres = u.use_type && u.use_type !== '住宅';
     if (nonres) {
       $('uMetrics').innerHTML = `<div class="mrow" style="grid-column:span 2">
-        <span class="k">单元用途</span><span class="v mid" style="font-size:11px">${u.use_type}</span></div>
+        <span class="k">本单元是否有价</span><span class="v mid" style="font-size:11px">否</span></div>
         <div class="mrow" style="grid-column:span 2">
-        <span class="k" style="color:#8d959f">该单元为公园、商业、学校或办公等非住宅用地，
-        不参与估值与精度统计</span></div>`;
-      $('uFactorTbl').querySelector('tbody').innerHTML = u.factors.map(f => `
-        <tr><td class="txt">${f.name}</td><td class="r">${brief(f.value)}</td>
-        <td class="r ${f.selected ? 'sig' : 'ns'}">${f.selected ? '✓' : ''}</td></tr>`).join('');
+        <span class="k" style="color:#8d959f">这里是${_useTxt}用地，不是住宅，
+        因此不参与估值与精度统计。想了解它的区位条件，可切到「空间诊断」看它所在街道的偏差。</span></div>`;
+      // 非住宅没有价格，因子取值对使用者没有意义，整表隐藏
+      const _t = $('uFactorTbl');
+      _t.style.display = 'none';
+      _t.querySelector('tbody').innerHTML = '';
       return;
     }
+    $('uFactorTbl').style.display = '';
     const items = [
       ['估值单价（中位）', price(u.est_median) + ' 元/㎡', 'mid'],
       ['校准后估值', u.est_cal != null ? price(u.est_cal) + ' 元/㎡' : '—', 'mid'],
@@ -1105,8 +1128,9 @@ $('map').addEventListener('mousemove', (ev) => {
   const v = (p.v || [])[k];
   const nm = (S.boot.units.name && S.boot.units.name[k]) || S.boot.units.id[k];
   const ut = (S.boot.units.use_type || [])[k];
+  const ud = (S.boot.units.use_detail || [])[k] || '非住宅';
   if (ut && ut !== '住宅') {
-    showTip(ev, `${nm} · 非住宅用地，不估值`);
+    showTip(ev, `${nm}（${ud}）：不估值`);
     return;
   }
   const _a = (S.result && S.result.arrays) || {};
