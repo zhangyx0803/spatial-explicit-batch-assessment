@@ -830,7 +830,6 @@ function renderLayers() {
         <label><input type="checkbox" data-center="${k}" ${on ? 'checked' : ''} ${arr.length ? '' : 'disabled'}>
         <i class="lsym c${k}"></i><span class="id">${lv[k]}</span>
         <span class="ty">${arr.length} 个</span></label>
-        ${names.length ? `<div class="lsub">${names.join('、')}</div>` : ''}
       </div>`;
     }).join('');
     cl.querySelectorAll('input[data-center]').forEach(cb => {
