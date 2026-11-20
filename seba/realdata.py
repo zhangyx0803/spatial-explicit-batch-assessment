@@ -892,7 +892,10 @@ def build_district_dataset(
         if district:
             _cands.append(os.path.join(_cfg, "catchment", "%s.csv" % district))
         _cands.append(os.path.join(_cfg, "catchment", "全市.csv"))
-        _cands.append(os.path.join(_cfg, "school_jingan.csv"))
+        # 静安旧表只含静安的招生班数与集团化属性，仅供静安使用；
+        # 其他区若借用，会把静安的对口关系套到别的区，属跨区污染。
+        if district == "静安区":
+            _cands.append(os.path.join(_cfg, "school_jingan.csv"))
         tbl = next((p for p in _cands if os.path.exists(p)), "")
         sch = load_schools(tbl if os.path.exists(tbl) else "")
         sx = (sch["x"] - lon0) * kx0
@@ -1239,8 +1242,9 @@ def build_district_dataset(
     if "metro" in poi_xy and poi_xy["metro"][0].size:
         rep.notes.append("地铁可达性：到最近站中位 %.1f 分钟（真实路网最短路）" % float(np.median(t_metro)))
     rep.notes.append("商业设施：1 km 内平均 %.1f 个" % float(shop_cnt.mean()))
-    rep.notes.append("价格：水平锚定 %s 2024 年二手住宅网签均价 %.0f 元/㎡（区内差异由真实因子驱动）"
-                     % (district or "全市加权", base))
+    if _src.startswith("合成"):
+        rep.notes.append("价格：水平锚定 %s 2024 年二手住宅网签均价 %.0f 元/㎡"
+                         "（区内差异由真实因子驱动）" % (district or "全市加权", base))
     # ---- 底图（简化后供前端绘制）----
     bm = {"boundaries": [], "roads": [], "centers": [], "unit_polys": [], "water": []}
     big = len(ids) > 1500          # 全市尺度不逐块画，否则传输体积过大
@@ -1316,8 +1320,12 @@ def build_district_dataset(
                          if x0 - m2 < c.x < x1 + m2 and y0 - m2 < c.y < y1 + m2]
     ds.basemap = bm
 
-    rep.notes.append("成交：%d 条（%.0f%% 单元有观测），为合成数据，仅用于验证方法链路"
-                     % (idx.size, obs_share * 100))
+    if _src.startswith("合成"):
+        rep.notes.append("成交：%d 条（%.0f%% 单元有观测），为合成数据，仅用于验证方法链路"
+                         % (idx.size, obs_share * 100))
+    else:
+        rep.notes.append("成交：%d 条，采用小区级真实挂牌价，非合成数据"
+                         % idx.size)
     return ds, rep
 
 

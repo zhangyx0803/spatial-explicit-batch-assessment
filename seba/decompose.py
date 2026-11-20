@@ -283,7 +283,7 @@ def render(dec: Decomposition, weights: Dict[str, float], adapted: float,
     L.append("-" * 74)
     L.append("  合计溢价          %+s 元/㎡"
              % _money(dec.model_price - dec.base_price))
-    L.append("  （标 * 的表示 90% 区间跨过 0，方向不确定）")
+    L.append("  （标 * 的表示 90% 区间不跨过 0，即方向确定）")
     L.append("")
     # ---- 质量评级 ----
     issues = []

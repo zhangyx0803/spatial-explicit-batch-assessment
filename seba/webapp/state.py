@@ -889,10 +889,26 @@ class AppState:
             "run_id": self.run_id,
             "config_fingerprint": self.cfg.fingerprint(),
             "seed": self.cfg.model.get("seed", 0),
-            "data_version": "用户导入" if self.source == "user" else "demo-2025-06-30 / 合成",
+            "data_version": self._data_version_text(),
+            "data_nature": self._data_nature_text(),
             "engine_version": "1.0.0",
         })
         return [xlsx, docx_path, png]
+
+
+    def _data_nature_text(self) -> str:
+        """导出报告里「数据性质」一栏的文字，按实际成交来源判定。"""
+        src = set(str(x) for x in self.ds.obs.source)
+        if any('合成' in x for x in src):
+            return '合成演示数据，精度指标不代表实盘能力'
+        return '小区级真实挂牌价（按 800 米聚合到评估单元），精度指标反映真实价格的可解释程度'
+
+    def _data_version_text(self) -> str:
+        """导出报告里「数据版本」一栏的文字。"""
+        if self.source == 'user':
+            return '用户导入'
+        src = set(str(x) for x in self.ds.obs.source)
+        return '内置数据包（合成价）' if any('合成' in x for x in src)             else '内置数据包（真实小区挂牌价 2024）'
 
 
 def _extent_with_basemap(u, bm) -> list:

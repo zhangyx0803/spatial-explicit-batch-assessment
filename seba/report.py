@@ -85,7 +85,7 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
     style.font.name = "Times New Roman"
     style.font.size = Pt(10.5)
 
-    h = doc.add_heading("空间显式批量评估工作台 V1.0", level=0)
+    h = doc.add_heading("空间显式批量评估工作台系统 V1.0", level=0)
     doc.add_paragraph("批量估值校准报告").runs[0].bold = True
 
     # 1 数据概况
@@ -191,7 +191,7 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
             ("随机种子", str(ctx["seed"])),
             ("数据版本", ctx["data_version"]),
             ("引擎版本", ctx["engine_version"]),
-            ("数据性质", "合成演示数据，精度指标不代表实盘能力"),
+            ("数据性质", ctx.get("data_nature") or "见数据来源说明"),
         ],
     )
 

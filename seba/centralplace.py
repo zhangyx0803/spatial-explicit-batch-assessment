@@ -170,7 +170,7 @@ def detect_centers(
     cand.sort(key=lambda c: -c.score)
     n1 = max(3, int(round(len(cand) * 0.12)))
     n2 = max(n1 + 3, int(round(len(cand) * 0.45)))
-    level_w = {1: 1.0, 2: 0.55, 3: 0.25}
+    level_w = {1: 1.0, 2: 0.50, 3: 0.25}
     for i, c in enumerate(cand):
         c.level = 1 if i < n1 else (2 if i < n2 else 3)
         c.weight = level_w[c.level]
