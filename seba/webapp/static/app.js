@@ -1542,8 +1542,8 @@ function renderDecomp() {
     const w = Math.round((DEC.pref[it.code] == null ? 0.5 : DEC.pref[it.code]) * 100);
     const off = w <= 0 ? ' class="off"' : '';
     return '<tr' + off + '>'
-      + '<td class="wcell"><input type="range" min="-100" max="100" step="10" value="' + w
-      + '" data-dec="' + it.code + '"><b>' + (w > 0 ? '+' : '') + w + '%</b></td>'
+      + '<td class="wcell"><input type="range" min="0" max="100" step="10" value="' + w
+      + '" data-dec="' + it.code + '"><b>' + w + '%</b></td>'
       + '<td class="txt">' + it.name + (it.hint ? '<div class="hint2">' + it.hint + '</div>' : '') + '</td>'
       + '<td class="r"><div class="' + cc + '">' + (c >= 0 ? '+' : '') + pint(c) + '</div>'
       + '<div class="civ ' + (it.significant ? '' : 'ns') + '">'
@@ -1556,7 +1556,7 @@ function renderDecomp() {
       const v = parseInt(sl.value, 10) / 100;
       DEC.pref[sl.dataset.dec] = v;
       const pw = Math.round(v * 100);
-      sl.parentNode.querySelector('b').textContent = (pw > 0 ? '+' : '') + pw + '%';
+      sl.parentNode.querySelector('b').textContent = pw + '%';
       sl.closest('tr').classList.toggle('off', pw <= 0);
       renderDecResult();
     };
@@ -1638,7 +1638,7 @@ const SCENES = {
   decomp:    { unit: 246, tab: 'decomp' },                    // 价格拆解
   decomp2:   { unit: 246, tab: 'decomp', prefs: { rt_metro_time: 0 } },   // 有车：不付地铁钱
   decomp3:   { unit: 246, tab: 'decomp',
-               prefs: { rt_metro_time: 0, rt_shop_1km: -0.3 } },          // 有车 + 不喜欢商场
+               prefs: { rt_metro_time: 0, rt_shop_1km: 0 } },          // 有车 + 不喜欢商场
   decomp4:   { unit: 246, tab: 'decomp', price: 150000 },                 // 议价：业主挂牌
   pick:      { probe: true },
   hover:     { probe: true, quiet: true },
@@ -1743,7 +1743,7 @@ function runScene() {
             sl.value = Math.round(v * 100);
             const pw = Math.round(v * 100);
             const b = sl.parentNode.querySelector('b');
-            if (b) b.textContent = (pw > 0 ? '+' : '') + pw + '%';
+            if (b) b.textContent = pw + '%';
             sl.closest('tr').classList.toggle('off', pw <= 0);
           }
         });

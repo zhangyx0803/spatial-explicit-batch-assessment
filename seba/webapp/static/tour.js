@@ -177,6 +177,7 @@ function tourPrev() {
     if (location.hash === '#tour') { setTimeout(() => tourStart(0), 300); return; }
     let done = null;
     try { done = localStorage.getItem('seba_tour_done'); } catch (e) {}
-    if (!done && location.hash !== '#intake') setTimeout(() => tourStart(0), 900);
+    const _noTour = new URLSearchParams(location.search).get('notour');
+    if (!done && !_noTour && location.hash !== '#intake') setTimeout(() => tourStart(0), 900);
   });
 })();
