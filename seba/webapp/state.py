@@ -305,9 +305,9 @@ class AppState:
         rows = []
         for code in self.pool:
             f = self.cfg.factor(code)
-            arr = self.ds.attrs[code]
+            values = self.ds.attrs[code]
             import numpy as _np
-            lo, hi = _np.percentile(arr, 2), _np.percentile(arr, 98)
+            lo, hi = _np.percentile(values, 2), _np.percentile(values, 98)
             rows.append({
                 "code": code,
                 "name": factor_name(code, f.note),
@@ -316,8 +316,8 @@ class AppState:
                 "note": f.note or "",
                 "params": copy.deepcopy(f.params),
                 "inputs": dict(f.inputs),
-                "mean": float(np.mean(arr)),
-                "sd": float(np.std(arr)),
+                "mean": float(np.mean(values)),
+                "sd": float(np.std(values)),
                 "selected": code in self.features,
                 "editable": code not in FACTOR_CN,
                 "invalid": bool(lo >= hi),
@@ -402,12 +402,12 @@ class AppState:
     def field(self, code: str) -> Dict:
         if code not in self.ds.attrs:
             raise KeyError("未知因子：%s" % code)
-        arr = self.ds.attrs[code]
+        values = self.ds.attrs[code]
         return {
             "code": code,
             "name": factor_name(code, self.cfg.factor(code).note),
-            "values": _num(arr, 4),
-            "min": float(np.min(arr)), "max": float(np.max(arr)), "mean": float(np.mean(arr)),
+            "values": _num(values, 4),
+            "min": float(np.min(values)), "max": float(np.max(values)), "mean": float(np.mean(values)),
         }
 
     def decompose_unit(self, idx: int, price=None, radius=1500.0, min_n=60) -> Dict:
@@ -514,11 +514,11 @@ class AppState:
         saved = []
         for f in files:
             name = os.path.basename(str(f.get("name") or "file.dat"))
-            data = f.get("b64") or ""
-            if not data:
+            payload = f.get("b64") or ""
+            if not payload:
                 continue
             try:
-                raw = _b64.b64decode(data.split(",")[-1])
+                raw = _b64.b64decode(payload.split(",")[-1])
             except Exception:
                 continue
             if not raw:
@@ -899,9 +899,9 @@ def _extent_with_basemap(u, bm) -> list:
     """地图范围要把底图一起包进来，否则村界/道路会画到画布外。"""
     ext = [float(u.x.min()), float(u.y.min()), float(u.x.max()), float(u.y.max())]
     xs, ys = [], []
-    for arr in (bm.get('boundaries') or []) + (bm.get('roads') or []):
-        xs.extend(arr[0::2])
-        ys.extend(arr[1::2])
+    for flat in (bm.get('boundaries') or []) + (bm.get('roads') or []):
+        xs.extend(flat[0::2])
+        ys.extend(flat[1::2])
     for c in bm.get('centers') or []:
         xs.append(c['x'])
         ys.append(c['y'])
@@ -936,17 +936,17 @@ def _dump_cfg(raw: Dict) -> str:
     # 配置本来就是从 YAML 解析来的 dict；这里用紧凑的自定义序列化避免引入依赖
     lines: List[str] = []
 
-    def emit(obj, indent: int) -> None:
+    def emit(node, indent: int) -> None:
         pad = " " * indent
-        if isinstance(obj, dict):
-            for k, v in obj.items():
+        if isinstance(node, dict):
+            for k, v in node.items():
                 if isinstance(v, (dict, list)) and v:
                     lines.append("%s%s:" % (pad, k))
                     emit(v, indent + 2)
                 else:
                     lines.append("%s%s: %s" % (pad, k, _scalar(v)))
-        elif isinstance(obj, list):
-            for item in obj:
+        elif isinstance(node, list):
+            for item in node:
                 if isinstance(item, dict):
                     first = True
                     for k, v in item.items():

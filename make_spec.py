@@ -17,7 +17,9 @@ from docx.shared import Cm, Pt, RGBColor
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = r"C:\Users\zhang\Documents\deepseek-harness\default-workspace\shots"
 OUTDIR = r"D:\上海师大\科研竞赛\软著申请\空间显式批量评估工作台系统\01_申报材料"
-OUT = os.path.join(OUTDIR, "空间显式批量评估工作台系统_V1.0_软件说明书.docx")
+# 注意：01_申报材料 下的说明书已改为手工维护（含人工修订的措辞与数字）。
+# 本脚本仅生成到 out/ 供比对，不再覆盖申报材料，避免冲掉人工修改。
+OUT = os.path.join(HERE, "out", "空间显式批量评估工作台系统_V1.0_软件说明书_生成版.docx")
 os.makedirs(OUTDIR, exist_ok=True)
 
 BLUE = RGBColor(0x1F, 0x38, 0x64)
