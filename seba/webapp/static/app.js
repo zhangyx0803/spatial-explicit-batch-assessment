@@ -1,9 +1,6 @@
 ﻿'use strict';
 
-/* =========================================================================
-   空间显式批量评估工作台系统 V1.0 —— 前端
-   界面全中文；技术标识（英文代码）只在次要位置小字提示。
-   ========================================================================= */
+/* 空间显式批量评估工作台系统 V1.0 —— 前端 界面全中文；技术标识（英文代码）只在次要位置小字提示。 */
 
 const S = {
   boot: null, result: null,
@@ -69,7 +66,7 @@ const statName = (s) => CAT.stat[s] || s;
 const impName = (t) => CAT.impedance[t] || t;
 const pDef = (k) => CAT.param[k] || { name: k, type: 'text' };
 
-/* ---------------- 通信 ---------------- */
+/* 通信 */
 async function getJSON(url) {
   const r = await fetch(url);
   const j = await r.json();
@@ -143,7 +140,7 @@ function tick() {
   $('timer').textContent = S.t0 ? ((performance.now() - S.t0) / 1000).toFixed(1) + ' 秒' : '';
 }
 
-/* ---------------- 色带 ---------------- */
+/* 色带 */
 const SEQ = ['#fdf6ec', '#fbe3c4', '#f6c68c', '#eda05c', '#d97544', '#b04a34', '#7a2a22'];
 const DIV = ['#21618c', '#7fb0cc', '#eef1f4', '#d9a08f', '#a3382b'];
 
@@ -156,9 +153,7 @@ function ramp(stops, t) {
   return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
 }
 
-/* =========================================================================
-   地图（按真实坐标绘制，支持不规则点位）
-   ========================================================================= */
+/* 地图（按真实坐标绘制，支持不规则点位） */
 const MAP = { s: 1, cell: 250, x0: 0, y0: 0, ctx: null, idx: null };
 
 function extentOf() {
@@ -243,8 +238,7 @@ function fieldPayload() {
   }
 }
 
-
-/* ===================== 六边形网格 ===================== */
+/* 六边形网格 */
 function hexRound(q, r) {
   let x = q, z = r, y = -x - z;
   let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
@@ -351,11 +345,10 @@ function drawMap0() {
   const clipPath = districtClipPath(bm, units);
   if (clipPath) { ctx.save(); ctx.clip(clipPath); }
 
-
   const usePoly = bm.unit_polys && bm.unit_polys.length === units.x.length;
   const mode = S.geom || (usePoly ? 'poly' : 'dot');
 
-  // ---- 六边形网格：等面积聚合，跨区可比，全市视图更清爽 ----
+  // 六边形网格：等面积聚合，跨区可比，全市视图更清爽
   if (mode === 'hex') {
     const cells = hexAggregate(units, vals, S.boot.units.area, g);
     const hs = cells.map(c => c.v).filter(Number.isFinite).sort((a, b) => a - b);
@@ -469,7 +462,7 @@ function drawMap0() {
     + `参与建模的因子 ${S.result.features.length} 个`;
 }
 
-/* ---- 底图：路网 + 单元轮廓 ---- */
+/* 底图：路网 + 单元轮廓 */
 function drawBasemap(ctx, s, g) {
   const bm = (S.boot && S.boot.basemap) || {};
 
@@ -706,9 +699,7 @@ function showTip(ev, text) {
   tip.style.top = y + 'px';
 }
 
-/* =========================================================================
-   左栏
-   ========================================================================= */
+/* 左栏 */
 function renderStatus() {
   const b = S.boot;
   if (!b) return;
@@ -842,9 +833,7 @@ function renderLayers() {
   }
 }
 
-/* =========================================================================
-   右栏：模型
-   ========================================================================= */
+/* 右栏：模型 */
 function renderMetrics() {
   const r = S.result, m = r.metrics;
   const codOk = r.ratio.cod != null && r.ratio.cod <= r.ratio.cod_max;
@@ -980,9 +969,7 @@ async function showUnit(idx) {
   } catch (e) { toast(e.message, true); }
 }
 
-/* =========================================================================
-   右栏：因子设置
-   ========================================================================= */
+/* 右栏：因子设置 */
 function renderFactorCards() {
   const box = $('factorCards');
   const valid = (S.boot.factors || []).filter(f => !f.invalid);
@@ -1066,7 +1053,7 @@ function readParamForm(card) {
   return out;
 }
 
-/* ---- 新增因子 ---- */
+/* 新增因子 */
 function renderTemplates() {
   const sel = $('tplSel');
   sel.innerHTML = (CAT.templates || []).map(t => `<option value="${t.key}">${t.name}</option>`).join('');
@@ -1126,9 +1113,7 @@ async function addFactor() {
   finally { setBusy(false); }
 }
 
-/* =========================================================================
-   运行
-   ========================================================================= */
+/* 运行 */
 let runTimer = null;
 function scheduleRun() { clearTimeout(runTimer); runTimer = setTimeout(doRun, 300); }
 
@@ -1167,9 +1152,7 @@ function renderAll() {
   renderDiag(); renderLayers(); renderFactorCards(); renderTemplates(); drawMap();
 }
 
-/* =========================================================================
-   数据导入
-   ========================================================================= */
+/* 数据导入 */
 const SLOTS = [
   {
     kind: 'units', title: '① 评估单元', req: true,
@@ -1338,9 +1321,7 @@ async function resetDemo() {
   finally { setBusy(false); }
 }
 
-/* =========================================================================
-   启动与事件
-   ========================================================================= */
+/* 启动与事件 */
 async function boot() {
   try {
     const b = await getJSON('/api/bootstrap');
@@ -1459,7 +1440,7 @@ window.addEventListener('resize', () => {
 
 boot();
 
-/* ---- 几何显示方式切换 ---- */
+/* 几何显示方式切换 */
 const GEOM_HINT = {
   poly: '按真实村/居委边界填色，能逐块核对，边界即行政单元。',
   hex: '等面积六边形网格（边长随范围自适应），跨区块可比，全市视图更清爽。',
@@ -1487,9 +1468,7 @@ const GEOM_HINT = {
   window.wiredGeom = true;
 })();
 
-/* =========================================================================
-   右栏：价格拆解 + 个性化适配
-   ========================================================================= */
+/* 右栏：价格拆解 + 个性化适配 */
 const DEC = { data: null, pref: {}, idx: null };
 const pint = (v) => NF.format(Math.round(v || 0));
 
@@ -1659,9 +1638,7 @@ window.addEventListener('load', () => {
   setTimeout(go, 800);
 });
 
-/* =========================================================================
-   场景深链：#scene=xxx  —— 用于说明书截图，可稳定复现每个步骤的界面状态
-   ========================================================================= */
+/* 场景深链：#scene=xxx  —— 用于说明书截图，可稳定复现每个步骤的界面状态 */
 const SCENES = {
   home:      {},                                              // 初始地图
   hex:       { geom: 'hex' },                                 // 六边形网格
@@ -1793,9 +1770,7 @@ function runScene() {
 
 runScene();
 
-/* =========================================================================
-   画布交互：滚轮缩放 / 拖拽平移 / 双击复位
-   ========================================================================= */
+/* 画布交互：滚轮缩放 / 拖拽平移 / 双击复位 */
 const DRAG = { on: false, x: 0, y: 0, moved: false };
 
 (function wireCanvas() {
@@ -1855,9 +1830,7 @@ $('btnZoomReset') && ($('btnZoomReset').onclick = () => {
   viewReset(); drawMap(); syncZoomLabel();
 });
 
-/* =========================================================================
-   进入时先选行政区
-   ========================================================================= */
+/* 进入时先选行政区 */
 async function showPicker(list, current) {
   const wrap = $('pickWrap');
   wrap.hidden = false;
@@ -1956,4 +1929,3 @@ function renderCalib() {
       + '<td class="r ' + t[1] + '">' + t[0] + '</td></tr>';
   }).join('');
 }
-

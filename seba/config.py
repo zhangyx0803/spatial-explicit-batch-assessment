@@ -33,9 +33,7 @@ class ConfigError(ValueError):
     """配置结构或参数非法。"""
 
 
-# --------------------------------------------------------------------------
 # 1. YAML 子集解析
-# --------------------------------------------------------------------------
 
 def _strip_comment(line: str) -> str:
     """去掉行尾注释，引号内的 # 不算注释。"""
@@ -205,9 +203,7 @@ def load_yaml(text: str) -> Any:
     return val
 
 
-# --------------------------------------------------------------------------
 # 2. 算子注册表：每个算子的必填输入、参数与单位要求
-# --------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class OpSpec:
@@ -310,9 +306,7 @@ VALID_MODES = ("drive", "walk", "bike")
 IMPERANCE_TYPES = ("exponential", "power", "gaussian")
 
 
-# --------------------------------------------------------------------------
 # 3. 配置对象
-# --------------------------------------------------------------------------
 
 @dataclass
 class FactorSpec:
@@ -408,7 +402,7 @@ class ProjectConfig:
     diagnosis: Dict[str, Any]
     raw: Dict[str, Any] = field(default_factory=dict)
 
-    # ---- 构造与校验 ----
+    # 构造与校验
     @classmethod
     def from_yaml(cls, text: str) -> "ProjectConfig":
         doc = load_yaml(text)
@@ -484,7 +478,7 @@ class ProjectConfig:
                     else:
                         _require(val in self.layers, "%s: 引用了未注册的图层 %r" % (f.code, val))
 
-    # ---- DAG ----
+    # DAG
     def dependencies(self) -> Dict[str, List[str]]:
         deps: Dict[str, List[str]] = {}
         for f in self.factors:

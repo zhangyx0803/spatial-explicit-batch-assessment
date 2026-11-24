@@ -17,9 +17,7 @@ from .net import CSRGraph, snap_points
 __all__ = ["OP_FUNCS", "RuntimeContext", "decay_fn"]
 
 
-# --------------------------------------------------------------------------
 # 衰减函数
-# --------------------------------------------------------------------------
 
 def decay_fn(imp: Dict, x: np.ndarray) -> np.ndarray:
     """按配置生成衰减权重。x 为距离或时间，sigma/beta 的量纲须与 x 一致。"""
@@ -45,9 +43,7 @@ def _decay_param(imp: Dict, x: np.ndarray) -> Dict:
     return out
 
 
-# --------------------------------------------------------------------------
 # 运行期上下文：图层解析、吸附缓存、图缓存
-# --------------------------------------------------------------------------
 
 class RuntimeContext:
     def __init__(self, ds: Dataset):
@@ -62,7 +58,7 @@ class RuntimeContext:
         self.snap_failures: Dict[str, float] = {}
         self.snap_mean_dist: Dict[str, float] = {}
 
-    # ---- 图 ----
+    # 图
     def graph(self, layer_id: str) -> CSRGraph:
         if layer_id not in self._graphs:
             lyr = self.ds.layer(layer_id)
@@ -77,7 +73,7 @@ class RuntimeContext:
             self._weights[key] = self.graph(layer_id).weights(mode)
         return self._weights[key]
 
-    # ---- 吸附 ----
+    # 吸附
     def snap_units(self, layer_id: str, max_dist_m: float = 300.0):
         key = (layer_id, round(max_dist_m, 3))
         if key not in self._snap_unit:
@@ -98,9 +94,7 @@ def _unit_mask(ds: Dataset, layer_id: str) -> np.ndarray:
     return np.ones(ds.n_units, dtype=bool)
 
 
-# --------------------------------------------------------------------------
 # 几何辅助（本演示版：点集 / 轴对齐矩形）
-# --------------------------------------------------------------------------
 
 def _point_dist_matrix(px: np.ndarray, py: np.ndarray, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     """返回 (n_points, n_units) 的欧氏距离矩阵。"""
@@ -141,9 +135,7 @@ def _disc_share(rects: List[tuple], xs: np.ndarray, ys: np.ndarray, radius: floa
     return out / samples
 
 
-# --------------------------------------------------------------------------
 # 算子实现
-# --------------------------------------------------------------------------
 
 def op_network_shortest_path(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     net_id = spec.inputs["network"]

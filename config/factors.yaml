@@ -1,8 +1,6 @@
-# =====================================================================
 # 空间显式批量评估工作台 —— 工程配置示例
 # 因子由这份声明驱动：引擎解析、拓扑排序、执行空间算子 DAG、结果缓存。
 # 新增因子只需在这里加一段，不改引擎代码。
-# =====================================================================
 
 project:
   name: 演示区空间显式批量评估
@@ -14,10 +12,8 @@ project:
     cell_m: 250
     seed: 20261117
 
-# ---------------------------------------------------------------------
 # 表 4：图层注册表。因子配置里引用的就是这里的 layer_id，
 # version 参与缓存键，改了数据必须改版本号。
-# ---------------------------------------------------------------------
 layers:
   road_net:     {type: network, asof_date: 2025-06-30, version: v1.0}
   poi_cbd:      {type: point,   asof_date: 2025-06-30, version: v1.0}
@@ -30,11 +26,9 @@ layers:
   layer_water:  {type: polygon, asof_date: 2025-06-30, version: v1.0}
   layer_noise:  {type: raster,  asof_date: 2025-06-30, version: v1.0}
 
-# ---------------------------------------------------------------------
 # 因子声明
-# ---------------------------------------------------------------------
 factors:
-  # ========== 区位：路网可达性 ==========
+  # 区位：路网可达性
   - code: net_cbd_dist
     op: network_shortest_path
     inputs:
@@ -115,7 +109,7 @@ factors:
     outputs: [n_reached]
     note: 15 分钟步行圈内地铁站数
 
-  # ========== 公共服务：2SFCA ==========
+  # 公共服务：2SFCA
   - code: acc_school_2sfca
     op: two_step_floating_catchment
     inputs:
@@ -155,7 +149,7 @@ factors:
     outputs: [value]
     note: 到最近公园的距离
 
-  # ========== 商业 ==========
+  # 商业
   - code: acc_poi_com_1km
     op: buffer_overlay
     inputs:
@@ -175,7 +169,7 @@ factors:
     outputs: [value]
     note: 商业核密度
 
-  # ========== 环境 ==========
+  # 环境
   - code: env_green_500m
     op: buffer_overlay
     inputs:
@@ -204,7 +198,7 @@ factors:
     outputs: [value]
     note: 夜间噪声值（用户导入栅格）
 
-  # ========== 微观路网 ==========
+  # 微观路网
   - code: net_intersect_dens
     op: network_topology
     inputs:
@@ -235,7 +229,7 @@ factors:
     outputs: [value]
     note: 300 m 内公交站点数
 
-  # ========== 规划与建成（属性直读，不经空间算子） ==========
+  # 规划与建成（属性直读，不经空间算子）
   - code: unit_pop
     op: attribute
     inputs:
@@ -264,7 +258,7 @@ factors:
     outputs: [value]
     note: 所在楼层 / 总层数
 
-  # ========== 盲合成的对照因子（与价格无因果关系） ==========
+  # 盲合成的对照因子（与价格无因果关系）
   - code: b_placebo_1
     op: attribute
     inputs:
@@ -279,9 +273,7 @@ factors:
     outputs: [value]
     note: 安慰剂因子 2，用于检验模型能否识别无效变量
 
-# ---------------------------------------------------------------------
 # 模型
-# ---------------------------------------------------------------------
 model:
   target: unit_price
   log_transform: true
@@ -315,18 +307,14 @@ model:
     random_folds: 5
     spatial_folds: 5
 
-# ---------------------------------------------------------------------
 # 批量估值与比率研究
-# ---------------------------------------------------------------------
 valuation:
   interval_bootstrap: 300
   levels: [10, 50, 90]
   cod_max: 15
   prd_range: [0.98, 1.03]
 
-# ---------------------------------------------------------------------
 # 空间诊断
-# ---------------------------------------------------------------------
 diagnosis:
   permutations: 499
   district_t_threshold: 1.5

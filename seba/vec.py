@@ -30,9 +30,7 @@ def _empty(path: str, kind: str = "polygon") -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=[], attrs={}, prj="", n=0)
 
 
-# ---------------------------------------------------------------------------
 # GeoJSON
-# ---------------------------------------------------------------------------
 
 def _from_geojson(path: str) -> Shapefile:
     with open(path, "r", encoding="utf-8") as fh:
@@ -100,9 +98,7 @@ def _from_geojson(path: str) -> Shapefile:
                      prj="GEOGCS[\"WGS 84\"]", n=len(geoms))
 
 
-# ---------------------------------------------------------------------------
 # KML
-# ---------------------------------------------------------------------------
 
 def _kml_coords(text: str) -> np.ndarray:
     pts = []
@@ -183,9 +179,7 @@ def _from_kml(path: str) -> Shapefile:
                      n=len(geoms))
 
 
-# ---------------------------------------------------------------------------
 # FileGDB（需要 pyogrio + shapely，均为可选依赖）
-# ---------------------------------------------------------------------------
 
 def gdb_layers(path: str) -> List[Tuple[str, str, int]]:
     """列出 gdb 里的图层：[(name, geometry_type, n_features), ...]"""
@@ -263,9 +257,7 @@ def _from_gdb(path: str, layer: Optional[str] = None) -> Shapefile:
                      prj="GEOGCS[\"WGS 84\"]", n=len(geoms))
 
 
-# ---------------------------------------------------------------------------
 # 统一入口
-# ---------------------------------------------------------------------------
 
 def read_vector(path: str, layer: Optional[str] = None) -> Shapefile:
     ext = os.path.splitext(path)[1].lower()

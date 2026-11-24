@@ -114,9 +114,7 @@ class AppState:
         self._activate(scene.dataset)
         self.load_seconds = time.perf_counter() - t0
 
-    # ------------------------------------------------------------------
     # 多区：扫描、切换
-    # ------------------------------------------------------------------
     @staticmethod
     def _scan_districts(d: str) -> List[Dict]:
         import json
@@ -151,9 +149,7 @@ class AppState:
         self.load_seconds = time.perf_counter() - t0
         return self.bootstrap()
 
-    # ------------------------------------------------------------------
     # 激活一个数据集：跑因子、定特征池、拟合
-    # ------------------------------------------------------------------
     def _activate(self, ds) -> None:
         self.ds = ds
         self.engine = FactorEngine(self.cfg, ds)
@@ -184,9 +180,7 @@ class AppState:
         self.features = keep
         self.result = self.fit(keep)
 
-    # ------------------------------------------------------------------
     # 模型层
-    # ------------------------------------------------------------------
     def _block(self) -> np.ndarray:
         obs = self.ds.obs
         k = int((self.cfg.model.get("cv") or {}).get("spatial_folds", 5))
@@ -264,7 +258,7 @@ class AppState:
             threshold=float((self.cfg.diagnosis or {}).get("district_t_threshold", 1.5)),
         )
 
-        # ---- 分区校准：按街道估偏差，收缩后修正估值 ----
+        # 分区校准：按街道估偏差，收缩后修正估值
         from ..stats import calibrate_block
 
         calib = calibrate_block(
@@ -323,9 +317,7 @@ class AppState:
         self._cache[key] = res
         return res
 
-    # ------------------------------------------------------------------
     # 概况
-    # ------------------------------------------------------------------
     def factor_stats(self) -> List[Dict]:
         rows = []
         for code in self.pool:
@@ -578,12 +570,8 @@ class AppState:
             ],
         }
 
-    # ------------------------------------------------------------------
     # 数据导入 / 恢复演示
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
     # 数据接入向导
-    # ------------------------------------------------------------------
     def _upload_dir(self) -> str:
         here = os.path.dirname(os.path.abspath(__file__))
         d = os.path.abspath(os.path.join(here, "..", "..", "uploads"))
@@ -673,7 +661,7 @@ class AppState:
             out["note"] = "配置已保存。下次启动时生效。"
             return out
 
-        # ---- 立刻加载并运行 ----
+        # 立刻加载并运行
         rd.reload_source(target)
         try:
             districts = [d for d, _ in rd.list_districts()]
@@ -840,9 +828,7 @@ class AppState:
             "guess": guess_map(cols, k),
         }
 
-    # ------------------------------------------------------------------
     # 因子配置
-    # ------------------------------------------------------------------
     def update_factors(self, changes: Dict[str, Dict]) -> None:
         for code, ch in (changes or {}).items():
             try:
@@ -887,9 +873,7 @@ class AppState:
         self._recompute()
         return {"code": code, "name": spec.note}
 
-    # ------------------------------------------------------------------
     # 导出
-    # ------------------------------------------------------------------
     def export(self, out_dir: str) -> List[str]:
         import pandas as pd
 

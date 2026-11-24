@@ -203,9 +203,7 @@ class BuildReport:
     notes: List[str] = field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
 # 读数据
-# ---------------------------------------------------------------------------
 
 def list_districts() -> List[Tuple[str, int]]:
     sf = read_vector(P_VILLAGE)
@@ -430,9 +428,7 @@ def _load_landuse(bbox, rep: BuildReport, lat0: float = None, lon0: float = None
     return out
 
 
-# ---------------------------------------------------------------------------
 # OSM POI / 交通点（从 FileGDB 读，只有装了 pyogrio 才可用）
-# ---------------------------------------------------------------------------
 
 _GDB_DIR = None
 
@@ -550,9 +546,7 @@ def load_osm_points(layer: str, keep: set = None, exclude_names: tuple = ()):
     return xs[keep_mask], ys[keep_mask], np.array([str(v or "") for v in nm])[keep_mask], fc[keep_mask]
 
 
-# ---------------------------------------------------------------------------
 # 栅格化与邻域聚合
-# ---------------------------------------------------------------------------
 
 def _rings_hit(px, py, rings) -> np.ndarray:
     """多环多边形判定：各环取并集。
@@ -654,9 +648,7 @@ def _pack(lines, tol, digits=1):
     return out
 
 
-# ---------------------------------------------------------------------------
 # 主流程
-# ---------------------------------------------------------------------------
 
 def _norm_jw(t: str) -> str:
     """居委名归一：去掉“居委会/居委”后缀与空白。"""
@@ -868,7 +860,7 @@ def build_district_dataset(
         rep.notes.append("CBD 锚点已落在路网内（距最近节点 %.0f 米）" % d_cbd_node)
     landuse = _load_landuse((x0, y0, x1, y1), rep, lat0=lat0, lon0=lon0)
 
-    # ---- OSM 点图层：地铁站 / 商业设施 / 公交站 ----
+    # OSM 点图层：地铁站 / 商业设施 / 公交站
     kx0 = 111320.0 * math.cos(math.radians(lat0))
     ky0 = 110540.0
     poi_xy = {}
@@ -887,7 +879,7 @@ def build_district_dataset(
     except RealDataError as exc2:
         rep.notes.append("⚠ 未载入 OSM 点图层（%s），地铁与商业因子将缺失" % exc2)
 
-    # ---- 学区：学校点位（面要素质心）+ 官方招生规模 ----
+    # 学区：学校点位（面要素质心）+ 官方招生规模
     sch = None
     try:
         _cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config")
@@ -952,7 +944,7 @@ def build_district_dataset(
     else:
         sch_catch = np.zeros(len(ids))
 
-    # ---- 栅格（覆盖研究区，每边留 1 km）----
+    # 栅格（覆盖研究区，每边留 1 km）
     pad = 1000.0
     gx0, gy0 = x0 - pad, y0 - pad
     nx = int((x1 - x0 + 2 * pad) / cell_m) + 1
@@ -1010,7 +1002,7 @@ def build_district_dataset(
         % (f_green.mean() * 100, f_built.mean() * 100, f_road.mean())
     )
 
-    # ---- 图层 ----
+    # 图层
     nodes_z = np.column_stack([graph.node_xy[:, 0], graph.node_xy[:, 1]])
     sub = keep
     remap = -np.ones(graph.n_nodes, dtype=np.int64)
@@ -1046,7 +1038,7 @@ def build_district_dataset(
         asof_date="2024",
     )
 
-    # ---- 成交（价格水平锚定真实区级均价，区内差异由真实网络可达性驱动）----
+    # 成交（价格水平锚定真实区级均价，区内差异由真实网络可达性驱动）
     if district:
         base = DISTRICT_PRICE.get(district, 60000.0)
     else:
@@ -1086,7 +1078,7 @@ def build_district_dataset(
         for k in range(sx.size):
             shop_cnt += (np.hypot(cx - sx[k], cy - sy[k]) <= 1000.0)
 
-    # ---- 中心地理论：识别分级中心地并计算加权可达性 ----
+    # 中心地理论：识别分级中心地并计算加权可达性
     from .centralplace import center_gravity, detect_centers
 
     cp_stats = {}
@@ -1156,7 +1148,7 @@ def build_district_dataset(
     # 水平校准：让合成价格的均值正好等于区级官方均价（对数正态会自带系统性上移）
     price_pm2 *= base / price_pm2.mean()
 
-    # ---- 按用地性质剔除非住宅单元 ----
+    # 按用地性质剔除非住宅单元
     _names_arr = [str(x) for x in jwnames]
     is_res = np.ones(len(ids), dtype=bool)
     _why = []
@@ -1175,7 +1167,7 @@ def build_district_dataset(
                      "商业、学校、办公等）已排除，不参与估值与统计"
                      % (int(is_res.sum()), len(ids), int((~is_res).sum())))
 
-    # ---- 若已具备小区级真实挂牌价，优先用真实价 ----
+    # 若已具备小区级真实挂牌价，优先用真实价
     real_arr = _load_real_unit_prices(district, cx, cy, lat0, lon0)
     real_cov = float(np.isfinite(real_arr).mean()) if len(ids) else 0.0
     if real_cov >= 0.30:
@@ -1250,7 +1242,7 @@ def build_district_dataset(
     if _src.startswith("合成"):
         rep.notes.append("价格：水平锚定 %s 2024 年二手住宅网签均价 %.0f 元/㎡"
                          "（区内差异由真实因子驱动）" % (district or "全市加权", base))
-    # ---- 底图（简化后供前端绘制）----
+    # 底图（简化后供前端绘制）
     bm = {"boundaries": [], "roads": [], "centers": [], "unit_polys": [], "water": []}
     big = len(ids) > 1500          # 全市尺度不逐块画，否则传输体积过大
 

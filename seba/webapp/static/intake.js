@@ -1,6 +1,4 @@
-/* =========================================================================
-   数据接入向导
-   ========================================================================= */
+/* 数据接入向导 */
 'use strict';
 
 const ITK = {
@@ -25,7 +23,7 @@ function itkOpen() {
 
 function itkClose() { $('intakeModal').hidden = true; }
 
-/* ---- 读文件为 base64 ---- */
+/* 读文件为 base64 */
 function itkRead(file) {
   return new Promise((res, rej) => {
     const fr = new FileReader();
@@ -74,7 +72,7 @@ function itkEsc(s) {
   return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-/* ---- 分析 ---- */
+/* 分析 */
 async function itkSample() {
   $('itkStatus').textContent = '正在识别内置的上海示例数据…';
   try {
@@ -274,7 +272,7 @@ async function itkApply() {
   }
 }
 
-/* ---- 绑定 ---- */
+/* 绑定 */
 /* 支持 #intake 直接打开（便于截图与分享） */
 if (location.hash === '#intake') {
   window.addEventListener('load', () => { itkOpen(); itkSample(); });

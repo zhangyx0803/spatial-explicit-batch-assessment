@@ -1,7 +1,5 @@
-# =====================================================================
 # 真实数据配置 v2：地铁可达性 + 商业密度 + CBD 可达性 + 环境品质
 # 数据源：上海村界 / 2024 真实路网 / 2026 土地利用 / OSM POI
-# =====================================================================
 
 project:
   name: 上海区县真实数据评估
@@ -21,7 +19,7 @@ layers:
   poi_bus:   {type: point,   asof_date: 2024, version: sh2024}
 
 factors:
-  # ---------------- 轨道与公交 ----------------
+  # 轨道与公交
   - code: rt_metro_time
     op: network_shortest_path
     inputs:
@@ -58,7 +56,7 @@ factors:
     outputs: [value]
     note: 300 米内公交站数
 
-  # ---------------- CBD ----------------
+  # CBD
   - code: rt_cbd_time
     op: network_shortest_path
     inputs:
@@ -72,7 +70,7 @@ factors:
     outputs: [t_min]
     note: 到人民广场车行时间
 
-  # ---------------- 商业 ----------------
+  # 商业
   - code: rt_shop_1km
     op: buffer_overlay
     inputs:
@@ -90,7 +88,7 @@ factors:
     outputs: [value]
     note: 500 米商业与工业用地占比
 
-  # ---------------- 中心地理论：分级加权可达性 ----------------
+  # 中心地理论：分级加权可达性
   - code: cp_gravity
     op: attribute
     inputs:
@@ -112,7 +110,7 @@ factors:
     outputs: [value]
     note: 30 分钟内可达的最高中心地等级
 
-  # ---------------- 学区（官方招生规模 + 真实学校点位） ----------------
+  # 学区（官方招生规模 + 真实学校点位）
   - code: sch_dist
     op: attribute
     inputs:
@@ -134,7 +132,7 @@ factors:
     outputs: [value]
     note: 最近小学是否集团化办学
 
-  # ---------------- 环境与路网品质 ----------------
+  # 环境与路网品质
   - code: rt_green_500
     op: attribute
     inputs:

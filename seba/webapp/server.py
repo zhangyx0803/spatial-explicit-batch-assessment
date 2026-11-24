@@ -36,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
     out_dir: str = None
     lock = threading.Lock()
 
-    # ---------------- 基础工具 ----------------
+    # 基础工具
     def log_message(self, fmt, *args):   # 静音访问日志，只留错误
         return
 
@@ -80,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
         with open(path, "rb") as fh:
             self._send(200, fh.read(), ctype)
 
-    # ---------------- 路由 ----------------
+    # 路由
     def do_GET(self):
         u = urlparse(self.path)
         p = u.path

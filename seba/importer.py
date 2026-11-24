@@ -27,9 +27,7 @@ class ImportError2(ValueError):
     """导入过程中的可读错误。"""
 
 
-# ---------------------------------------------------------------------------
 # 读文件
-# ---------------------------------------------------------------------------
 
 def read_bytes(b64: str) -> str:
     raw = base64.b64decode(b64.split(",")[-1])
@@ -51,9 +49,7 @@ def parse_table(text: str) -> pd.DataFrame:
     return df
 
 
-# ---------------------------------------------------------------------------
 # 列映射猜测
-# ---------------------------------------------------------------------------
 
 _KEYS = {
     "id": ["单元编号", "单元id", "单元id", "编号", "宗地号", "小区", "unit_id", "id", "code"],
@@ -124,9 +120,7 @@ def guess_map(cols: List[str], kind: str) -> Dict[str, Optional[str]]:
     return out
 
 
-# ---------------------------------------------------------------------------
 # 坐标
-# ---------------------------------------------------------------------------
 
 def _to_xy(df: pd.DataFrame, m: Dict, what: str) -> Tuple[np.ndarray, np.ndarray, str]:
     def col(k):
@@ -168,9 +162,7 @@ def _text(item: Dict) -> str:
     raise ImportError2("缺少文件内容")
 
 
-# ---------------------------------------------------------------------------
 # 构建
-# ---------------------------------------------------------------------------
 
 def _auto_network(x0: float, y0: float, x1: float, y1: float, cell: float) -> np.ndarray:
     """没有提供路网时，按研究区范围生成规则格网示意路网。"""
@@ -196,7 +188,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     if cell <= 0:
         raise ImportError2("单元尺寸必须大于 0")
 
-    # ---- 评估单元 ----
+    # 评估单元
     u = spec.get("units") or {}
     if not (u.get("text") or u.get("b64")):
         raise ImportError2("请先导入“评估单元”文件")
@@ -250,7 +242,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     if unit_attrs:
         notes.append("评估单元：已读取 %d 个属性字段（%s）" % (len(unit_attrs), "、".join(unit_attrs)))
 
-    # ---- 成交 ----
+    # 成交
     o = spec.get("obs") or {}
     if not (o.get("text") or o.get("b64")):
         raise ImportError2("请导入“成交记录”文件")
@@ -299,7 +291,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     if ok.sum() < 30:
         notes.append("⚠ 有效成交只有 %d 条，回归结果不稳定，建议补到 100 条以上" % ok.sum())
 
-    # ---- 路网 ----
+    # 路网
     nw = spec.get("network") or {}
     if nw.get("text") or nw.get("b64"):
         ndf = parse_table(_text(nw))
@@ -373,7 +365,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
 
     layers: Dict[str, LayerData] = {"road_net": net}
 
-    # ---- 点 / 面图层 ----
+    # 点 / 面图层
     for i, ly in enumerate(spec.get("layers") or []):
         if not (ly.get("text") or ly.get("b64")):
             continue

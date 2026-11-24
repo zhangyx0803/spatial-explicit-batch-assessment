@@ -1,8 +1,4 @@
-/* =========================================================================
-   空间显式批量评估工作台 V1.0 —— 界面样式
-   定位：专业评估 / GIS 工具。细边框、低圆角、等宽数字、高信息密度。
-   刻意不用：渐变、卡片阴影、胶囊按钮、装饰性流程圆点。
-   ========================================================================= */
+/* 空间显式批量评估工作台 V1.0 —— 界面样式 定位：专业评估 / GIS 工具。细边框、低圆角、等宽数字、高信息密度。 刻意不用：渐变、卡片阴影、胶囊按钮、装饰性流程圆点。 */
 
 :root {
   --bg: #eceef1;
@@ -654,9 +650,7 @@ main {
 .fcard-b .row2 { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; padding-top: 4px; }
 .ename { font: 9.5px/1 var(--mono); color: #a4abb4; }
 
-/* =========================================================================
-   数据接入向导
-   ========================================================================= */
+/* 数据接入向导 */
 .dialog.wide { max-width: 940px; width: 92vw; }
 
 .step { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -729,9 +723,7 @@ select.input { cursor: pointer; }
 .dialog.wide { max-height: 90vh; display: flex; flex-direction: column; }
 .dialog.wide .dlg-body { overflow-y: auto; }
 
-/* =========================================================================
-   新手引导
-   ========================================================================= */
+/* 新手引导 */
 .btn.ghost {
   width: 26px; padding: 0; text-align: center;
   background: transparent; border-color: transparent; color: #8d959f;
@@ -763,8 +755,7 @@ select.input { cursor: pointer; }
 .tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .tour-idx { font-size: 11px; color: #8d959f; font-family: var(--mono); margin-right: 4px; }
 
-
-/* ---- 地图几何切换 ---- */
+/* 地图几何切换 */
 .seg { display: flex; margin-top: 10px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .segbtn {
   flex: 1 1 0; padding: 5px 0; font-size: 11.5px; cursor: pointer;
@@ -775,7 +766,7 @@ select.input { cursor: pointer; }
 .segbtn:hover { background: #f4f6f8; }
 .segbtn.active { background: var(--accent); color: #fff; }
 
-/* ---- 地图图例 ---- */
+/* 地图图例 */
 .foot-legend { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #5d656f; margin-right: 14px; }
 .cdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; border: 1px solid #fff; }
 .cdot.l1 { background: #7d2a1c; }
@@ -784,9 +775,7 @@ select.input { cursor: pointer; }
 .cline { display: inline-block; width: 16px; height: 2px; background: rgba(74,86,100,.55); margin-left: 8px; }
 .cbox { display: inline-block; width: 12px; height: 9px; background: #dce8f2; border: 1px solid #b9cfe0; margin-left: 8px; }
 
-/* =========================================================================
-   价格拆解页签
-   ========================================================================= */
+/* 价格拆解页签 */
 .emptytip {
   padding: 26px 18px; text-align: center; font-size: 12.5px;
   line-height: 1.9; color: #8d959f;
@@ -837,7 +826,6 @@ select.input { cursor: pointer; }
   margin-top: 7px; font-size: 11px; line-height: 1.75; color: #7a828c;
   padding: 6px 9px; background: #fafbfc; border-left: 2px solid var(--line);
 }
-
 
 /* 价格拆解：权重滑杆 */
 .dec-tbl .wcell { white-space: nowrap; }

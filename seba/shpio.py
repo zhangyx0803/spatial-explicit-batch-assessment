@@ -158,9 +158,7 @@ def read_shapefile(path: str, limit: Optional[int] = None) -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=geoms, attrs=attrs, prj=_prj(path), n=n)
 
 
-# ---------------------------------------------------------------------------
 # 几何工具
-# ---------------------------------------------------------------------------
 
 def ring_area(ring: np.ndarray) -> float:
     x, y = ring[:, 0], ring[:, 1]

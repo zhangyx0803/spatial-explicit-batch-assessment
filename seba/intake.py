@@ -23,9 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 __all__ = ["FileInfo", "inspect_file", "guess_roles", "build_datasource", "ROLES"]
 
 
-# ---------------------------------------------------------------------------
 # 角色定义：系统需要哪些数据、每类数据需要哪些字段
-# ---------------------------------------------------------------------------
 
 ROLES: Dict[str, Dict[str, Any]] = {
     "units": {
@@ -115,9 +113,7 @@ ONEWAY_VALS = {"f", "t", "b", "1", "0", "是", "否", "单", "双", "单向", "�
                "true", "false", "yes", "no", "y", "n", "单行", "双行"}
 
 
-# ---------------------------------------------------------------------------
 # 文件探测
-# ---------------------------------------------------------------------------
 
 @dataclass
 class FileInfo:
@@ -373,9 +369,7 @@ def inspect_file(path: str) -> FileInfo:
                     columns=[], sample={}, error="不支持的文件类型")
 
 
-# ---------------------------------------------------------------------------
 # 字段语义打分
-# ---------------------------------------------------------------------------
 
 def _norm(s: str) -> str:
     return str(s).strip().lower().replace(" ", "").replace("_", "").replace("-", "")
@@ -562,9 +556,7 @@ def guess_roles(files: List[FileInfo]) -> List[FileInfo]:
     return files
 
 
-# ---------------------------------------------------------------------------
 # 生成数据源配置
-# ---------------------------------------------------------------------------
 
 def build_datasource(mapping: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """mapping: role -> {path, fields:{role_field: column}}"""

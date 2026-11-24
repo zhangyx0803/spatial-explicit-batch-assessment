@@ -5,9 +5,9 @@
 路网：与格网同构的棋盘路网，按主干道 / 次干道 / 支路分等级赋速，含单向边与尽端支路。
 
 关于价格生成（重要）：
-价格由一个**潜在过程**生成，只依赖"地理事实"本身（到 CBD 的通勤时间、到地铁的步行距离、
+价格由一个潜在过程生成，只依赖"地理事实"本身（到 CBD 的通勤时间、到地铁的步行距离、
 绿地率、商业密度、人口密度、容积率、噪声），外加一个平滑的空间随机场和重尾噪声。
-该过程与因子引擎**互不知道对方**：引擎随后从同一份地理数据里把因子算出来，
+该过程与因子引擎互不知道对方：引擎随后从同一份地理数据里把因子算出来，
 模型能否恢复系数、能否把两个无关的安慰剂因子压到 0，就是对方法的真实检验。
 """
 
@@ -58,7 +58,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     rng = np.random.default_rng(seed)
     grid = Grid(nx=nx, ny=ny, cell=cell)
 
-    # ---------------- 路网 ----------------
+    # 路网
     # 节点：格点 (i, j)，i∈[0, nx]，j∈[0, ny]
     node_ij = np.array([(i, j) for j in range(ny + 1) for i in range(nx + 1)], dtype=int)
     node_xy = np.column_stack([node_ij[:, 0] * cell, node_ij[:, 1] * cell]).astype(float)
@@ -100,7 +100,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     graph_drive = CSRGraph(node_xy.shape[0], edges, node_xy)
     graph_walk = graph_drive  # 同一张拓扑，阻抗按模式不同
 
-    # ---------------- 评估单元 ----------------
+    # 评估单元
     ix = np.repeat(np.arange(nx), ny)
     iy = np.tile(np.arange(ny), nx)
     n_units = ix.size
@@ -111,7 +111,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     admin_code = np.array(["3101%02d" % (int(i) * 4 + int(j) // 10 + 1) for i, j in zip(ix // 10, iy)])
     area = np.full(n_units, grid.area, dtype=float)
 
-    # ---------------- 图层：POI 与设施 ----------------
+    # 图层：POI 与设施
     def jitter_along_trunk(n: int, offset_sd: float = 90.0) -> tuple:
         """沿主干道两侧撒点（商业沿街分布）。"""
         lines = rng.choice([2, 4, 6, 8], size=n) * 5 * cell   # 每 5 格一条次干道以上
@@ -177,7 +177,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
         polygons=water,
     )
 
-    # ---------------- 栅格图层 ----------------
+    # 栅格图层
     pop = np.exp(-(((np.arange(nx)[:, None] - nx * 0.45) / (nx * 0.22)) ** 2
                    + ((np.arange(ny)[None, :] - ny * 0.5) / (ny * 0.25)) ** 2))
     pop = pop / pop.max() * 0.9 + 0.1 + rng.normal(0, 0.03, (nx, ny))
@@ -239,7 +239,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
         "layer_noise": layer_noise,
     }
 
-    # ---------------- 潜在过程（生成价格用） ----------------
+    # 潜在过程（生成价格用）
     snap_unit = snap_points(cx, cy, node_xy, max_dist_m=300.0)
     w_drive = graph_drive.weights("drive")
     w_walk = graph_drive.weights("walk")
@@ -305,7 +305,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     log_price_pm2 = np.log(58000.0) + z + noise_eps
     price_pm2 = np.exp(log_price_pm2)
 
-    # ---------------- 成交样本（55% 单元有成交） ----------------
+    # 成交样本（55% 单元有成交）
     has_obs = rng.random(n_units) < 0.55
     obs_idx = np.nonzero(has_obs)[0]
     n_obs = obs_idx.size

@@ -14,9 +14,7 @@ import numpy as np
 __all__ = ["write_workbook", "write_calibration_report"]
 
 
-# --------------------------------------------------------------------------
 # XLSX
-# --------------------------------------------------------------------------
 
 def write_workbook(path: str, sheets: Dict[str, "object"]) -> str:
     import pandas as pd
@@ -27,9 +25,7 @@ def write_workbook(path: str, sheets: Dict[str, "object"]) -> str:
     return path
 
 
-# --------------------------------------------------------------------------
 # DOCX
-# --------------------------------------------------------------------------
 
 def _set_cell(cell, text, bold=False, size=8.5, align_center=False):
     from docx.shared import Pt
@@ -161,8 +157,7 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
         ],
     )
     doc.add_paragraph(
-        "口径说明：COD 的分子是各比率与中位数比率之绝对偏差的算术平均，"
-        "不做 0.6745 换算；比率基于空间分块 CV 的留块预测，为样本外口径。"
+        "比率基于空间分块交叉验证的留块预测，为样本外口径。"
     )
 
     # 6 空间诊断

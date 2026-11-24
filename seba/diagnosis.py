@@ -175,7 +175,7 @@ def residual_map_png(
     ys = np.asarray(ys, dtype=float)
     resid = np.asarray(resid, dtype=float)
 
-    # ---- 覆盖范围：优先用面数据，边界更贴合 ----
+    # 覆盖范围：优先用面数据，边界更贴合
     if polys:
         px = [v for f in polys if f for i, v in enumerate(f) if i % 2 == 0]
         py = [v for f in polys if f for i, v in enumerate(f) if i % 2 == 1]
@@ -199,7 +199,7 @@ def residual_map_png(
     font = _load_cjk_font(12)
     small = _load_cjk_font(10)
 
-    # ---- 底图：水体 ----
+    # 底图：水体
     if water:
         for f in water:
             if not f or len(f) < 6:
@@ -210,7 +210,7 @@ def residual_map_png(
     vmax = float(np.percentile(np.abs(resid[np.isfinite(resid)]), 95)) if np.isfinite(resid).any() else 1.0
     vmax = vmax if vmax > 0 else 1.0
 
-    # ---- 单元面填色 ----
+    # 单元面填色
     used_poly = False
     if polys and len(polys) == resid.size:
         for k, f in enumerate(polys):
@@ -225,7 +225,7 @@ def residual_map_png(
                 fill, out = _diverging_color(float(v), vmax), (255, 255, 255)
             dr.polygon(pts, fill=fill, outline=out)
 
-    # ---- 底图：路网（压在面色之上、用浅色细线，保证可读） ----
+    # 底图：路网（压在面色之上、用浅色细线，保证可读）
     if roads:
         for seg in roads:
             if not seg or len(seg) < 4:
@@ -233,7 +233,7 @@ def residual_map_png(
             pts = [(X(seg[i]), Y(seg[i + 1])) for i in range(0, len(seg), 2)]
             dr.line(pts, fill=(196, 201, 207), width=1)
 
-    # ---- 无面数据时退回方块 ----
+    # 无面数据时退回方块
     if not used_poly:
         c = float(cell) if cell else 250.0
         s2 = max(2, int(c * sc))
@@ -247,7 +247,7 @@ def residual_map_png(
             dr.rectangle([xa, ya, xa + s2 - 1, ya + s2 - 1],
                          fill=_diverging_color(float(resid[k]), vmax))
 
-    # ---- 图例 ----
+    # 图例
     ly = pad + int(h * sc) + 18
     bar_w = 240
     for i in range(bar_w):

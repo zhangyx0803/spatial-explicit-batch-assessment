@@ -6,7 +6,7 @@
     拆解：给定一个已知价格 → 拆成各项特征各贡献了多少（只需局部有效）
 
 方法：
-    1. 取目标点周边 radius 米内的成交样本，拟合**局部**特征价格模型
+    1. 取目标点周边 radius 米内的成交样本，拟合局部特征价格模型
        log(单价) = b0 + Σ b_i · x_i
     2. 用 Shapley 值把“目标价 − 基准价”精确分摊到每个因子
        （乘法模型下 Shapley 可加且公平：Σ 各项 = 总溢价）
@@ -285,7 +285,7 @@ def render(dec: Decomposition, weights: Dict[str, float], adapted: float,
              % _money(dec.model_price - dec.base_price))
     L.append("  （标 * 的表示 90% 区间不跨过 0，即方向确定）")
     L.append("")
-    # ---- 质量评级 ----
+    # 质量评级
     issues = []
     if dec.n_samples < 100:
         issues.append("样本仅 %d 套成交，系数估计不稳" % dec.n_samples)

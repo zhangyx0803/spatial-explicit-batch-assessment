@@ -63,7 +63,7 @@ class FactorEngine:
         self._cache: Dict[str, Dict[str, np.ndarray]] = {}
         self._factor_sig: Dict[str, str] = {}
 
-    # ---- 缓存键 ----
+    # 缓存键
     def cache_key(self, f: FactorSpec) -> str:
         parts = [f.op, OP_VERSION, f.signature()]
         for val in f.inputs.values():
@@ -81,7 +81,7 @@ class FactorEngine:
         blob = "|".join(parts)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
-    # ---- 执行 ----
+    # 执行
     def run(self, progress: Optional[Callable[[str, bool, float], None]] = None) -> EngineReport:
         rep = EngineReport()
         order = self.cfg.topological_order()
@@ -144,7 +144,7 @@ class FactorEngine:
         rep.snap_mean_dist = dict(self.ctx.snap_mean_dist)
         return rep
 
-    # ---- attr 长表导出 ----
+    # attr 长表导出
     def to_long_table(self, run_id: str):
         import pandas as pd
 

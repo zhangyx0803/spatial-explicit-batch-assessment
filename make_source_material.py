@@ -11,6 +11,7 @@ import os
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
@@ -64,7 +65,7 @@ def collect():
             txt = open(os.path.join(HERE, rel), encoding="utf-8").read().split("\n")
         except Exception:
             continue
-        lines.append("#" * 3 + " 文件：" + rel + " " + "#" * 3)
+        lines.append("# 文件：" + rel)
         for t in txt:
             t = t.replace("\t", "    ").rstrip()
             if t.strip():
@@ -99,6 +100,47 @@ def setup(wid):
     hr.font.name = "宋体"
     hr.font.size = Pt(9)
     hr._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+    add_footer(s)
+
+
+
+def _field(par, instr):
+    """插入 Word 域（PAGE / NUMPAGES）。"""
+    run = par.add_run()
+    begin = OxmlElement("w:fldChar")
+    begin.set(qn("w:fldCharType"), "begin")
+    code = OxmlElement("w:instrText")
+    code.set(qn("xml:space"), "preserve")
+    code.text = instr
+    sep = OxmlElement("w:fldChar")
+    sep.set(qn("w:fldCharType"), "separate")
+    end = OxmlElement("w:fldChar")
+    end.set(qn("w:fldCharType"), "end")
+    for el in (begin, code, sep, end):
+        run._r.append(el)
+    run.font.name = "宋体"
+    run.font.size = Pt(9)
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+
+
+def add_footer(sec):
+    sec.footer_distance = Cm(0.6)
+    fp = sec.footer.paragraphs[0]
+    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = fp.add_run("第 ")
+    r.font.name = "宋体"
+    r.font.size = Pt(9)
+    r._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+    _field(fp, " PAGE ")
+    r2 = fp.add_run(" 页  共 ")
+    r2.font.name = "宋体"
+    r2.font.size = Pt(9)
+    r2._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+    _field(fp, " NUMPAGES ")
+    r3 = fp.add_run(" 页")
+    r3.font.name = "宋体"
+    r3.font.size = Pt(9)
+    r3._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
 
 
 def emit(wid, lines, start_no):

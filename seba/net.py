@@ -90,7 +90,7 @@ class CSRGraph:
         p1 = self.node_xy[self.edge_dst]
         self.edge_bearing = np.arctan2(p1[:, 1] - p0[:, 1], p1[:, 0] - p0[:, 0])
 
-    # ---- 阻抗 ----
+    # 阻抗
     def weights(self, mode: str) -> np.ndarray:
         """边权（分钟）：长度 / 该等级该模式的行驶速度。"""
         if mode not in SPEED_TABLE:
@@ -99,7 +99,7 @@ class CSRGraph:
         speed = np.array([table.get(int(c), min(table.values())) for c in self.edge_cls])
         return self.edge_len / speed
 
-    # ---- 诊断 ----
+    # 诊断
     def connectivity(self) -> Dict[str, float]:
         """连通分量与悬挂节点统计，进质量报告。"""
         n = self.n_nodes
@@ -133,11 +133,11 @@ class CSRGraph:
             "oneway_share": self.oneway_share,
         }
 
-    # ---- 单源最短路 ----
+    # 单源最短路
     def to_csr(self, w: np.ndarray):
         """转成 scipy 的 CSR 矩阵（只在装了 scipy 时可用）。
 
-        CSR 的 indices 必须是**列号**，也就是每条边的终点节点；传边号会构造出错误的矩阵。
+        CSR 的 indices 必须是列号，也就是每条边的终点节点；传边号会构造出错误的矩阵。
         """
         if not HAS_SCIPY:
             raise RuntimeError("未安装 scipy")
@@ -274,9 +274,7 @@ class CSRGraph:
         return dist_node
 
 
-# --------------------------------------------------------------------------
 # 吸附
-# --------------------------------------------------------------------------
 
 @dataclass
 class SnapResult:
