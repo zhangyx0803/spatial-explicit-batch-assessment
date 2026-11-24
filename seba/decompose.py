@@ -2,16 +2,16 @@
 """价格拆解 + 个性化适配。
 
 和"预测房价"是两件事：
-    预测：给定特征 → 猜一个价（要求系数跨区通用，做不到）
-    拆解：给定一个已知价格 → 拆成各项特征各贡献了多少（只需局部有效）
+    预测：给定特征 -> 猜一个价（要求系数跨区通用，做不到）
+    拆解：给定一个已知价格 -> 拆成各项特征各贡献了多少（只需局部有效）
 
 方法：
     1. 取目标点周边 radius 米内的成交样本，拟合局部特征价格模型
-       log(单价) = b0 + Σ b_i · x_i
-    2. 用 Shapley 值把“目标价 − 基准价”精确分摊到每个因子
+       log(单价) = b0 + Σ b_i * x_i
+    2. 用 Shapley 值把目标价 − 基准价精确分摊到每个因子
        （乘法模型下 Shapley 可加且公平：Σ 各项 = 总溢价）
     3. Bootstrap 重抽样，给出每项贡献的置信区间
-    4. 按用户的支付意愿权重重新加总，得到“适配价”和“冤枉钱”
+    4. 按用户的支付意愿权重重新加总，得到适配价和冤枉钱
 
 用法：
     python decompose.py --unit V00247
@@ -28,8 +28,6 @@ import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
-
-
 # 因子的中文名与"对买家意味着什么"
 BUYER_HINT = {
     "rt_metro_time": "通勤（不坐地铁的人可设 0）",
@@ -43,7 +41,6 @@ BUYER_HINT = {
     "sch_dist": "学校距离",
 }
 
-
 @dataclass
 class Item:
     code: str
@@ -52,7 +49,6 @@ class Item:
     lo: float = 0.0              # Bootstrap 5%
     hi: float = 0.0              # Bootstrap 95%
     log_contrib: float = 0.0
-
 
 @dataclass
 class Decomposition:
@@ -68,7 +64,6 @@ class Decomposition:
     coeffs: Dict[str, float] = field(default_factory=dict)
     bad_sign: List[str] = field(default_factory=list)
 
-
 def _fit_local(X, y, feats, lam=3.0):
     """带 L2 正则的 OLS（局部样本少，必须正则化）。"""
     import numpy as np
@@ -83,11 +78,10 @@ def _fit_local(X, y, feats, lam=3.0):
     ss_tot = float(((y - y.mean()) ** 2).sum()) or 1e-12
     return beta, 1.0 - ss_res / ss_tot
 
-
 def _shapley(ratios, base):
     """乘法模型的 Shapley 分解：把 base*(Πr_i - 1) 分摊到各因子。
 
-    ratios: 每个因子的 (r_i - 1)，r_i = exp(b_i·(x_i - x̄_i))
+    ratios: 每个因子的 (r_i - 1)，r_i = exp(b_i*(x_i - x̄_i))
     返回与 ratios 等长的贡献列表，满足 Σ = base*(Πr - 1)
     """
     n = len(ratios)
@@ -109,7 +103,6 @@ def _shapley(ratios, base):
                 acc += w * prod
         phi[i] = base * (r[i] - 1.0) * acc
     return phi
-
 
 def decompose(ds, weights: Dict[str, float], target_idx: int,
               asking_price: float = None, radius: float = 1500.0,
@@ -135,7 +128,7 @@ def decompose(ds, weights: Dict[str, float], target_idx: int,
         raise RuntimeError("周边 %.0f 米内只有 %d 条成交，样本太少无法拆解"
                            % (r, len(sel)))
 
-    # 只用有变化的因子（96% 取值相同的因子是伪变量，放进去会污染拆解）
+    # 只用有变化的因子（96% 取值相同的因子是常量列，放进去会污染拆解）
     import numpy as _np
     feats = []
     for c in weights:
@@ -230,9 +223,8 @@ def decompose(ds, weights: Dict[str, float], target_idx: int,
         bad_sign=bad_sign,
     )
 
-
 def personalize(dec: Decomposition, weights: Dict[str, float]) -> Tuple[float, List[Item]]:
-    """按用户支付意愿重新加总：适配价 = 基准 + Σ w_i · 贡献_i。"""
+    """按用户支付意愿重新加总：适配价 = 基准 + Σ w_i * 贡献_i。"""
     adapted = dec.base_price
     wasted = []
     for it in dec.items:
@@ -245,16 +237,14 @@ def personalize(dec: Decomposition, weights: Dict[str, float]) -> Tuple[float, L
     wasted.sort(key=lambda x: -x.contribution)
     return adapted, wasted
 
-
 def _money(v: float) -> str:
     return ("{:,.0f}".format(round(v)))
-
 
 def render(dec: Decomposition, weights: Dict[str, float], adapted: float,
            wasted: List[Item], area: float = 90.0) -> str:
     L = []
     L.append("=" * 74)
-    L.append("  价格拆解  ·  单元 %s" % dec.unit_id)
+    L.append("  价格拆解  *  单元 %s" % dec.unit_id)
     L.append("=" * 74)
     L.append("  待拆解价格        %s 元/㎡" % _money(dec.asking_price))
     L.append("  局部子市场基准价  %s 元/㎡   （周边 %.0f 米内 %d 套成交，R²=%.2f）"
@@ -300,9 +290,9 @@ def render(dec: Decomposition, weights: Dict[str, float], adapted: float,
     level = "高" if not issues else ("中" if len(issues) == 1 else "低")
     L.append("  【拆解可信度】%s" % level)
     for x in issues:
-        L.append("    · " + x)
+        L.append("    * " + x)
     if not issues:
-        L.append("    · 样本量充足、解释力可接受、系数方向正常")
+        L.append("    * 样本量充足、解释力可接受、系数方向正常")
     L.append("")
     if wasted or any(w < 1 for w in weights.values()):
         L.append("=" * 74)

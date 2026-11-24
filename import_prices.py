@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""把“小区价目表”转换成系统能吃的“成交记录”，自动落位到评估单元。
+"""把小区价目表转换成系统能吃的成交记录，自动落位到评估单元。
 
 适用场景：你从任何合规渠道拿到一张小区价格表（手工整理、官方公示、
 机构授权数据），都能用它接进模型。
 
-输入 CSV 至少要有“单价”一列，另外提供以下任一空间信息：
-    经度 + 纬度      → 按最近邻落到评估单元（推荐）
-    所属街道         → 落到该街道内所有单元（较粗，但可用）
+输入 CSV 至少要有单价一列，另外提供以下任一空间信息：
+    经度 + 纬度      -> 按最近邻落到评估单元（推荐）
+    所属街道         -> 落到该街道内所有单元（较粗，但可用）
 
 用法：
     python import_prices.py 小区价目表.csv --district 徐汇区
@@ -29,7 +29,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # 价格合理性区间（元/㎡），超出视为录入错误
 PRICE_RANGE = (3000, 300000)
 
-
 def read_csv(path: str):
     raw = open(path, "rb").read()
     for enc in ("utf-8-sig", "utf-8", "gb18030", "big5"):
@@ -51,7 +50,6 @@ def read_csv(path: str):
     rows = list(csv.reader(io.StringIO("\n".join(lines)), delimiter=delim))
     return rows[0], rows[1:]
 
-
 def pick_col(cols, cands):
     for c in cands:
         for i, col in enumerate(cols):
@@ -62,7 +60,6 @@ def pick_col(cols, cands):
             if c.lower() in col.strip().lower():
                 return i
     return -1
-
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -81,7 +78,7 @@ def main() -> int:
         return 2
 
     print("=" * 66)
-    print("  小区价目表 → 评估单元")
+    print("  小区价目表 -> 评估单元")
     print("=" * 66)
 
     cols, rows = read_csv(args.csv)
@@ -140,7 +137,7 @@ def main() -> int:
     print("\n[3] 数据校验")
     print("    有效记录：%d" % len(recs))
     if bad_price:
-        print("    丢弃（单价格式/范围异常）：%d  （合理区间 %.0f–%.0f 元/㎡）"
+        print("    丢弃（单价格式/范围异常）：%d  （合理区间 %.0f-%.0f 元/㎡）"
               % (bad_price, PRICE_RANGE[0], PRICE_RANGE[1]))
     if bad_coord:
         print("    丢弃（坐标无法解析）：%d" % bad_coord)
@@ -185,7 +182,7 @@ def main() -> int:
     buckets = [[] for _ in range(n)]
 
     if has_xy:
-        # 经纬度 → 本地平面坐标（与 realdata 一致）
+        # 经纬度 -> 本地平面坐标（与 realdata 一致）
         lat0 = float(np.mean(units.y) * 0 + 31.2)
         lon0 = 121.4
         # 用单元坐标反推原点的经纬度基准
@@ -248,7 +245,6 @@ def main() -> int:
     print("    %d 条记录，可直接用于建模（替换现有合成成交数据）" % covered)
     print("=" * 66)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -37,7 +37,7 @@ cd spatial-explicit-batch-assessment
 ```bash
 pip install -r requirements.txt
 python check_env.py                                  # 环境自检
-python run_web.py --no-open --bundle data/demo_xuhui.bundle
+python run_web.py --no-open --bundle data/xuhui.bundle
 # 打开 http://127.0.0.1:8765
 ```
 
@@ -112,7 +112,7 @@ python run_web.py --real 徐汇区
 python run_web.py --real 全市
 
 # 打包成可分发数据集
-python run_web.py --export-bundle data/demo_xuhui.bundle --real 徐汇区
+python run_web.py --export-bundle data/xuhui.bundle --real 徐汇区
 ```
 
 换城市：编辑 `config/datasource.json`（参考 `config/datasource.example.json`），路径与字段名都可配，代码不用改。
@@ -126,7 +126,7 @@ spatial-explicit-batch-assessment/
 ├── run_web.py        启动入口（支持 --bundle / --real / --export-bundle）
 ├── check_env.py      部署前环境自检
 ├── data/
-│   └── demo_xuhui.bundle   预打包数据集（880 KB，含因子结果与底图）
+│   └── xuhui.bundle   预打包数据集（880 KB，含因子结果与底图）
 ├── config/
 │   ├── factors.yaml        演示场景因子配置
 │   ├── factors_real.yaml   真实数据因子配置

@@ -22,10 +22,9 @@ if os.path.isdir(_v):
 
 HERE = _HERE
 
-
 def main() -> int:
     ap = argparse.ArgumentParser(description="价格拆解 + 个性化适配")
-    ap.add_argument("--bundle", default=os.path.join(HERE, "data", "demo_xuhui.bundle"))
+    ap.add_argument("--bundle", default=os.path.join(HERE, "data", "districts/徐汇区.bundle"))
     ap.add_argument("--unit", required=True, help="目标单元编号，如 V00247")
     ap.add_argument("--price", type=float, default=None,
                     help="待拆解的价格（元/㎡）；不给就用该单元的成交价")
@@ -62,7 +61,6 @@ def main() -> int:
     adapted, wasted = personalize(dec, weights)
     print(render(dec, weights, adapted, wasted, area=args.area))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

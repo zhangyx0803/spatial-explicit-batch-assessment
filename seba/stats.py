@@ -25,7 +25,6 @@ __all__ = [
     "fit_and_evaluate",
 ]
 
-
 # 1. Student t 分布（统计量 p 值用，避免硬依赖 scipy）
 
 def _betacf(a: float, b: float, x: float) -> float:
@@ -62,7 +61,6 @@ def _betacf(a: float, b: float, x: float) -> float:
             break
     return h
 
-
 def _betai(a: float, b: float, x: float) -> float:
     if x <= 0.0:
         return 0.0
@@ -77,7 +75,6 @@ def _betai(a: float, b: float, x: float) -> float:
         return bt * _betacf(a, b, x) / a
     return 1.0 - bt * _betacf(b, a, 1.0 - x) / b
 
-
 def t_pvalue(t: float, df: float) -> float:
     """双侧 p 值。"""
     if not np.isfinite(t) or df <= 0:
@@ -85,14 +82,12 @@ def t_pvalue(t: float, df: float) -> float:
     x = df / (df + t * t)
     return float(_betai(df / 2.0, 0.5, x))
 
-
 @dataclass
 class TStat:
     coef: float
     se: float
     t: float
     p: float
-
 
 # 2. 线性模型
 
@@ -127,10 +122,8 @@ class ModelResult:
             )
         return out
 
-
 def _design(X: np.ndarray) -> np.ndarray:
     return np.column_stack([np.ones(X.shape[0]), X])
-
 
 def ols_fit(X: np.ndarray, y: np.ndarray, names: Sequence[str]) -> ModelResult:
     Xd = _design(X)
@@ -158,7 +151,6 @@ def ols_fit(X: np.ndarray, y: np.ndarray, names: Sequence[str]) -> ModelResult:
         r2=r2, adj_r2=adj, rmse_log=rmse_log, dof=dof,
         smearing=sm, family="OLS",
     )
-
 
 def ridge_fit(X: np.ndarray, y: np.ndarray, names: Sequence[str], lam: float = 1.0) -> ModelResult:
     """岭回归：标准化后求解，系数换算回原始量纲后再报告。"""
@@ -188,7 +180,6 @@ def ridge_fit(X: np.ndarray, y: np.ndarray, names: Sequence[str], lam: float = 1
         smearing=duan_smearing(resid), family="Ridge", lam=lam,
     )
 
-
 # 3. 共线性
 
 def vif_table(X: np.ndarray, names: Sequence[str]) -> List[List]:
@@ -208,13 +199,11 @@ def vif_table(X: np.ndarray, names: Sequence[str]) -> List[List]:
     rows.sort(key=lambda r: -float(r[2]))
     return rows
 
-
 # 4. Duan smearing 与反变换
 
 def duan_smearing(resid_log: np.ndarray) -> float:
     """Duan (1983) smearing 估计因子 E[exp(ε)]，用于把对数尺度预测还原到水平尺度。"""
     return float(np.mean(np.exp(resid_log)))
-
 
 # 5. 交叉验证
 
@@ -233,7 +222,6 @@ def _metrics(y_log: np.ndarray, pred_log: np.ndarray, smearing: float) -> Dict[s
         "r2": float(1.0 - np.sum(resid ** 2) / np.sum((y_log - y_log.mean()) ** 2)),
     }
 
-
 def _fit_plain(X: np.ndarray, y: np.ndarray, family: str, lam: float) -> np.ndarray:
     Xd = _design(X)
     if family == "ridge":
@@ -250,10 +238,8 @@ def _fit_plain(X: np.ndarray, y: np.ndarray, family: str, lam: float) -> np.ndar
     beta, *_ = np.linalg.lstsq(Xd, y, rcond=None)
     return beta
 
-
 def _predict(beta: np.ndarray, X: np.ndarray) -> np.ndarray:
     return _design(X) @ beta
-
 
 def random_cv(X: np.ndarray, y: np.ndarray, k: int = 5, family: str = "ols",
               lam: float = 1.0, seed: int = 0):
@@ -269,7 +255,6 @@ def random_cv(X: np.ndarray, y: np.ndarray, k: int = 5, family: str = "ols",
     m = _metrics(y, preds, sm)
     m["smearing"] = sm
     return m, preds
-
 
 def spatial_block_cv(X: np.ndarray, y: np.ndarray, block: np.ndarray, k: int = 5,
                      family: str = "ols", lam: float = 1.0):
@@ -289,7 +274,6 @@ def spatial_block_cv(X: np.ndarray, y: np.ndarray, block: np.ndarray, k: int = 5
     m["n_blocks"] = float(len(uniq))
     return m, preds
 
-
 # 6. 总装
 
 @dataclass
@@ -306,7 +290,6 @@ class ModelResultBundle:
     resid_log: np.ndarray
     train_metrics: Dict[str, float] = field(default_factory=dict)
     oof_log: Optional[np.ndarray] = None
-
 
 def fit_and_evaluate(
     X: np.ndarray,
@@ -387,11 +370,10 @@ class Calibration:
             })
         return out
 
-
 def calibrate_block(groups, resid_log, k: float = 5.0) -> Calibration:
     """按分组估计对数残差均值，收缩后作为该组的估值校准量。
 
-    收缩公式 bias = mean × n / (n + k)：样本少的组自动向 0 靠拢，
+    收缩公式 bias = mean x n / (n + k)：样本少的组自动向 0 靠拢，
     避免仅凭两三条成交就大幅修正整条街道。
     """
     g = np.asarray(groups).astype(str)

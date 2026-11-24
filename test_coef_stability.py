@@ -19,7 +19,6 @@ if os.path.isdir(_v):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-
 def one(district: str):
     import numpy as np
 
@@ -54,7 +53,6 @@ def one(district: str):
     out["_n"] = int(len(y))
     out["_r2"] = float(b.train_metrics["r2"])
     return out
-
 
 def main() -> int:
     from seba.realdata import list_districts
@@ -106,7 +104,6 @@ def main() -> int:
     else:
         print("  所有因子跨区极差都在中位数的 1 倍以内")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

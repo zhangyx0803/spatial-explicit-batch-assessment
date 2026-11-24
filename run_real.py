@@ -31,13 +31,11 @@ from seba.realdata import DISTRICT_PRICE, build_district_dataset, list_districts
 from seba.report import write_calibration_report, write_workbook
 from seba.stats import fit_and_evaluate
 
-
 def hr(t=""):
     print("\n" + "=" * 74)
     if t:
         print(t)
         print("=" * 74)
-
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="真实数据批量评估")
@@ -65,7 +63,7 @@ def main(argv=None):
     hr("步骤 1 / 5  读取真实地理数据")
     print("数据源：")
     print("  村界    F:\\上海师大\\各种地理数据\\2024全国村级行政边界")
-    print("  路网    F:\\上海师大\\各种地理数据\\2024年道路数据（分城市·上海市）")
+    print("  路网    F:\\上海师大\\各种地理数据\\2024年道路数据（分城市*上海市）")
     print("  土地利用 F:\\上海师大\\各种地理数据\\2026省级土地利用（上海市）")
     print("可用区县：%s" % "、".join("%s(%d)" % (d, n) for d, n in list_districts()))
     t0 = time.perf_counter()
@@ -74,7 +72,7 @@ def main(argv=None):
     print("\n%s：%d 个评估单元 / %d 条成交 / 用时 %.1fs"
           % (district or "上海全市", ds.n_units, ds.n_obs(), time.perf_counter() - t0))
     for n in rep.notes:
-        print("  ·", n)
+        print("  *", n)
 
     hr("步骤 2 / 5  执行因子 DAG（真实路网最短路）")
     engine = FactorEngine(cfg, ds)
@@ -132,7 +130,7 @@ def main(argv=None):
     for b in range(200):
         sims[b] = np.exp(pred + rng.choice(bundle.resid_log, ds.n_units, replace=True))
     lo, mid, hi = np.percentile(sims, [10, 50, 90], axis=0)
-    print("估值中位 %.0f 元/㎡（区间 %.0f–%.0f）" % (np.median(est), np.median(lo), np.median(hi)))
+    print("估值中位 %.0f 元/㎡（区间 %.0f-%.0f）" % (np.median(est), np.median(lo), np.median(hi)))
     ratio = ratio_study(np.exp(bundle.oof_log), y,
                         cod_max=float(cfg.valuation.get("cod_max", 15)),
                         prd_range=tuple(cfg.valuation.get("prd_range", [0.98, 1.03])))
@@ -188,7 +186,6 @@ def main(argv=None):
         print("  %-28s %7.1f KB" % (os.path.basename(p), os.path.getsize(p) / 1024))
     print("\n总耗时 %.1fs" % (time.perf_counter() - t0))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

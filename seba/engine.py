@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""因子计算引擎：解析 → 建 DAG → 拓扑排序 → 执行 → 缓存 → 落 attr 表。
+"""因子计算引擎：解析 -> 建 DAG -> 拓扑排序 -> 执行 -> 缓存 -> 落 attr 表。
 
 缓存键 = (算子名, 算子版本, 参数指纹, 各输入的版本指纹)。
 算子代码或任一层图层版本变化都会让缓存失效，同参数不重算。
@@ -22,7 +22,6 @@ __all__ = ["FactorEngine", "EngineReport", "OP_VERSION"]
 
 OP_VERSION = "1.0.0"   # 算子实现版本：改了算法必须改这个号，否则会命中旧缓存
 
-
 @dataclass
 class FactorRun:
     code: str
@@ -31,7 +30,6 @@ class FactorRun:
     seconds: float
     outputs: List[str] = field(default_factory=list)
     note: str = ""
-
 
 @dataclass
 class EngineReport:
@@ -53,7 +51,6 @@ class EngineReport:
             [r.code, r.op, "命中" if r.cache_hit else "计算", "%.3f" % r.seconds, ", ".join(r.outputs)]
             for r in self.runs
         ]
-
 
 class FactorEngine:
     def __init__(self, cfg: ProjectConfig, ds: Dataset, ctx: Optional[RuntimeContext] = None):
@@ -151,8 +148,8 @@ class FactorEngine:
         rows = []
         for code, arr in self.ds.attrs.items():
             f = self.cfg.factor(code)
-            # 该因子主要输入对应的图层版本，便于追溯“用的是哪一版图”
-            layer_ver = "—"
+            # 该因子主要输入对应的图层版本，便于追溯用的是哪一版图
+            layer_ver = "-"
             for _k, _v in (f.inputs or {}).items():
                 _lay = self.ds.layers.get(str(_v))
                 if _lay is not None and getattr(_lay, "version", None):

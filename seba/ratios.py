@@ -9,7 +9,6 @@ import numpy as np
 
 __all__ = ["ratio_study"]
 
-
 def ratio_study(
     estimated: np.ndarray,
     sale: np.ndarray,

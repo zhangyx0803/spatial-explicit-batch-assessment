@@ -19,7 +19,7 @@ if _sys.version_info < (3, 10):
     print('')
     print('解决办法（本项目已带好环境，直接运行即可）：')
     print('  Windows:  双击运行  启动.bat')
-    print('  或手动:   .venv\\Scripts\\python.exe run_web.py --bundle data/demo_xuhui.bundle')
+    print('  或手动:   .venv\\Scripts\\python.exe run_web.py --bundle data/xuhui.bundle')
     print('=' * 62)
     _sys.exit(1)
 
@@ -37,9 +37,8 @@ sys.path.insert(0, _BASE)
 
 from seba.webapp import serve  # noqa: E402
 
-
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="空间显式批量评估工作台系统 · Web 可视化版")
+    ap = argparse.ArgumentParser(description="空间显式批量评估工作台系统 * Web 可视化版")
     ap.add_argument("--config", default=os.path.join("config", "factors.yaml"))
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
@@ -138,7 +137,7 @@ def main(argv=None) -> int:
         from seba.realdata import build_district_dataset
 
         district = None if args.real in ("全市", "all") else args.real
-        print("[0/2] 装配真实地理数据（%s），约需 10–60 秒 …" % (args.real,))
+        print("[0/2] 装配真实地理数据（%s），约需 10-60 秒 ..." % (args.real,))
         ds, rep = build_district_dataset(district)
         cfg = os.path.join(base, "config", "factors_real.yaml")
         print("      完成：%d 单元 / %d 成交" % (ds.n_units, ds.n_obs()))
@@ -162,7 +161,6 @@ def main(argv=None) -> int:
 
     serve(cfg, host=args.host, port=args.port, out_dir=out, open_browser=not args.no_open)
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

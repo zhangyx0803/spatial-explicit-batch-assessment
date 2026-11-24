@@ -50,4 +50,4 @@ for lvl in (1, 2, 3):
     print("\n=== %d 级中心地 %d 个（前 15）===" % (lvl, len(lst)))
     for c in lst[:15]:
         print("  %-12s 强度 %8.1f  500m 商业 %3d  (%.0f, %.0f)"
-              % (c.name or "—", c.score, c.n_poi, c.x / 1000, c.y / 1000))
+              % (c.name or "-", c.score, c.n_poi, c.x / 1000, c.y / 1000))

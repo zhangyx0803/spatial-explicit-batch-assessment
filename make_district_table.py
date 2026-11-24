@@ -20,7 +20,6 @@ if os.path.isdir(_v):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-
 def run_one(district: str, cell: float, radius: float):
     import numpy as np
 
@@ -89,7 +88,6 @@ def run_one(district: str, cell: float, radius: float):
         "耗时s": round(time.perf_counter() - t0, 1),
     }
 
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--districts", nargs="*", default=None)
@@ -106,12 +104,12 @@ def main() -> int:
         targets = [d for d, _ in list_districts()]
 
     print("=" * 78)
-    print("  上海分区批量评估  ——  %d 个区" % len(targets))
+    print("  上海分区批量评估  -  %d 个区" % len(targets))
     print("=" * 78)
 
     rows = []
     for i, d in enumerate(targets, 1):
-        print("\n[%d/%d] %s ……" % (i, len(targets), d), flush=True)
+        print("\n[%d/%d] %s ......" % (i, len(targets), d), flush=True)
         try:
             r = run_one(d, args.cell, args.radius)
             rows.append(r)
@@ -182,7 +180,6 @@ def main() -> int:
     if ok:
         print("  " + "、".join(r["区县"] for r in ok))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

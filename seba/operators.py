@@ -16,7 +16,6 @@ from .net import CSRGraph, snap_points
 
 __all__ = ["OP_FUNCS", "RuntimeContext", "decay_fn"]
 
-
 # 衰减函数
 
 def decay_fn(imp: Dict, x: np.ndarray) -> np.ndarray:
@@ -33,7 +32,6 @@ def decay_fn(imp: Dict, x: np.ndarray) -> np.ndarray:
         return np.exp(-0.5 * (x / max(sigma, 1e-9)) ** 2)
     raise ValueError("未知衰减类型：%s" % kind)
 
-
 def _decay_param(imp: Dict, x: np.ndarray) -> Dict:
     """高斯衰减若以 _min 命名，则在此处统一量纲。"""
     out = dict(imp)
@@ -41,7 +39,6 @@ def _decay_param(imp: Dict, x: np.ndarray) -> Dict:
         if "sigma" not in out and "sigma_min" in out:
             out["sigma"] = float(out["sigma_min"])
     return out
-
 
 # 运行期上下文：图层解析、吸附缓存、图缓存
 
@@ -89,12 +86,10 @@ class RuntimeContext:
         g = self.graph("road_net")
         return snap_points(lyr.x, lyr.y, g.node_xy, max_dist_m)
 
-
 def _unit_mask(ds: Dataset, layer_id: str) -> np.ndarray:
     return np.ones(ds.n_units, dtype=bool)
 
-
-# 几何辅助（本演示版：点集 / 轴对齐矩形）
+# 几何辅助（本版本：点集 / 轴对齐矩形）
 
 def _point_dist_matrix(px: np.ndarray, py: np.ndarray, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     """返回 (n_points, n_units) 的欧氏距离矩阵。"""
@@ -103,20 +98,17 @@ def _point_dist_matrix(px: np.ndarray, py: np.ndarray, xs: np.ndarray, ys: np.nd
         out[k] = np.hypot(xs - px[k], ys - py[k])
     return out
 
-
 def _rect_dist(rect: tuple, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     rx, ry, rw, rh = rect
     dx = np.maximum.reduce([xs - (rx + rw), rx - xs, np.zeros_like(xs)])
     dy = np.maximum.reduce([ys - (ry + rh), ry - ys, np.zeros_like(ys)])
     return np.hypot(dx, dy)
 
-
 def _poly_dist(rects: List[tuple], xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     d = np.full(xs.size, np.inf)
     for r in rects:
         d = np.minimum(d, _rect_dist(r, xs, ys))
     return d
-
 
 def _disc_share(rects: List[tuple], xs: np.ndarray, ys: np.ndarray, radius: float,
                 samples: int = 40, seed: int = 11) -> np.ndarray:
@@ -133,7 +125,6 @@ def _disc_share(rects: List[tuple], xs: np.ndarray, ys: np.ndarray, radius: floa
             hit |= (px >= rx) & (px <= rx + rw) & (py >= ry) & (py <= ry + rh)
         out += hit
     return out / samples
-
 
 # 算子实现
 
@@ -177,7 +168,6 @@ def op_network_shortest_path(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str
     best_dist = np.where(ok & np.isfinite(best_dist), best_dist, t_fill * 300.0)
     return {"dist_m": best_dist, "t_min": best_time}
 
-
 def op_network_isochrone(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     net_id = spec.inputs["network"]
     dst_id = spec.inputs["destinations"]
@@ -203,13 +193,12 @@ def op_network_isochrone(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np
     nearest = np.where(np.isfinite(nearest), nearest, tmax * 2)
     return {"t_min": nearest, "n_reached": cnt}
 
-
 def op_gravity_access(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     imp = _decay_param(spec.params["impedance"], np.zeros(1))
     dist_ref = spec.inputs.get("dist")
 
     if isinstance(dist_ref, str) and dist_ref.startswith("factor:"):
-        # 单一目的地的重力可达性：mass · f(dist)
+        # 单一目的地的重力可达性：mass * f(dist)
         code = dist_ref.split(":", 1)[1]
         d = ds.attrs[code]
         mass = float(spec.params.get("mass", 1.0))
@@ -221,7 +210,6 @@ def op_gravity_access(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.nd
     d = _point_dist_matrix(lyr.x, lyr.y, ctx.unit_x, ctx.unit_y)
     f = decay_fn(imp, np.maximum(d, 1e-9))
     return {"index": (f * w[:, None]).sum(axis=0)}
-
 
 def op_two_step_floating_catchment(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     sup_id = spec.inputs["supply"]
@@ -249,7 +237,7 @@ def op_two_step_floating_catchment(ctx: RuntimeContext, ds: Dataset, spec) -> Di
     unit_nodes = units_snap.node
     Fdec = decay_fn(dec, np.maximum(np.zeros(1), 1e-9))  # 仅为取函数
 
-    # 第一遍：算每个设施的供需比分母 Σ P·f(t)
+    # 第一遍：算每个设施的供需比分母 Σ P*f(t)
     denom = np.zeros(lyr.x.size)
     for (a, b), buf in g.iter_dijkstra_many(sup_snap.node, w, limit=tmax, chunk=16):
         sub = buf[:, unit_nodes]
@@ -258,7 +246,7 @@ def op_two_step_floating_catchment(ctx: RuntimeContext, ds: Dataset, spec) -> Di
 
     R = np.where(denom > 0, S / np.maximum(denom, 1e-12), 0.0)
 
-    # 第二遍：按需求点聚合 Σ R·f(t)
+    # 第二遍：按需求点聚合 Σ R*f(t)
     A = np.zeros(ds.n_units)
     for (a, b), buf in g.iter_dijkstra_many(sup_snap.node, w, limit=tmax, chunk=16):
         sub = buf[:, unit_nodes]
@@ -266,13 +254,11 @@ def op_two_step_floating_catchment(ctx: RuntimeContext, ds: Dataset, spec) -> Di
         A += (R[a:b, None] * F).sum(axis=0)
     return {"sfca_index": A}
 
-
 def op_distance_decay(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     code = spec.inputs["dist"].split(":", 1)[1]
     d = ds.attrs[code]
     imp = _decay_param(spec.params["impedance"], np.zeros(1))
     return {"value": decay_fn(imp, np.maximum(d, 1e-9))}
-
 
 def op_buffer_overlay(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     lyr = ds.layer(spec.inputs["layer"])
@@ -297,7 +283,6 @@ def op_buffer_overlay(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.nd
 
     raise ValueError("buffer_overlay 不支持图层类型 %s" % lyr.layer_type)
 
-
 def op_spatial_join_agg(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     lyr = ds.layer(spec.inputs["layer"])
     stat = spec.params["stat"]
@@ -314,7 +299,6 @@ def op_spatial_join_agg(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.
         return {"value": d}
     raise ValueError("spatial_join_agg 不支持的统计量：%s" % stat)
 
-
 def op_kernel_density(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     lyr = ds.layer(spec.inputs["layer"])
     h = float(spec.params["bandwidth_m"])
@@ -322,7 +306,6 @@ def op_kernel_density(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.nd
     d = _point_dist_matrix(lyr.x, lyr.y, ctx.unit_x, ctx.unit_y)
     k = np.exp(-0.5 * (d / h) ** 2) / (2 * np.pi * h * h) * 1e6
     return {"value": (k * w[:, None]).sum(axis=0)}
-
 
 def op_network_topology(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     net_id = spec.inputs["network"]
@@ -362,7 +345,6 @@ def op_network_topology(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.
         return {"deadend_ratio": out / np.maximum(tot, 1.0)}
     raise ValueError("network_topology 不支持的统计量：%s" % stat)
 
-
 def op_raster_extract(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     lyr = ds.layer(spec.inputs["raster"])
     v = lyr.value
@@ -372,7 +354,6 @@ def op_raster_extract(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.nd
     iy = np.clip((cy / ds.grid.cell).astype(int), 0, ny - 1)
     return {"value": v[ix, iy]}
 
-
 def _unit_field(ds: Dataset, name: str) -> np.ndarray:
     if name in ds.unit_attrs:
         return ds.unit_attrs[name]
@@ -380,12 +361,10 @@ def _unit_field(ds: Dataset, name: str) -> np.ndarray:
         return np.asarray(getattr(ds.units, name), dtype=float)
     raise KeyError("未知单元字段：%s" % name)
 
-
 def op_attribute(ctx: RuntimeContext, ds: Dataset, spec) -> Dict[str, np.ndarray]:
     ref = spec.inputs["field"]
     name = ref.split(":", 1)[1] if ":" in ref else ref
     return {"value": _unit_field(ds, name).astype(float)}
-
 
 OP_FUNCS: Dict[str, Callable] = {
     "network_shortest_path": op_network_shortest_path,

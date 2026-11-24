@@ -3,7 +3,7 @@
 
 相较上一版：
     1. 删除身份证号栏（著作权登记时另附）
-    2. 费用条款改为“共同费用双方平均分担”
+    2. 费用条款改为共同费用双方平均分担
     3. 由 13 条压缩为 10 条，约 3 页
     4. 删除附件，模块清单并入正文
 """
@@ -35,14 +35,12 @@ n.element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
 n.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
 n.paragraph_format.line_spacing = Pt(19)
 
-
 def _f(run, name="宋体", size=10.5, bold=False):
     run.font.name = name
     run.font.size = Pt(size)
     run.bold = bold
     run._element.rPr.rFonts.set(qn("w:eastAsia"), name)
     return run
-
 
 def TITLE(t):
     p = doc.add_paragraph()
@@ -51,14 +49,12 @@ def TITLE(t):
     p.paragraph_format.space_after = Pt(16)
     _f(p.add_run(t), "黑体", 17)
 
-
 def H(t):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(10)
     p.paragraph_format.space_after = Pt(3)
     p.paragraph_format.keep_with_next = True
     _f(p.add_run(t), "黑体", 11.5, True)
-
 
 def P(t, prefix=None, indent=True):
     p = doc.add_paragraph()
@@ -71,13 +67,11 @@ def P(t, prefix=None, indent=True):
     _f(p.add_run(t), "宋体", 10.5)
     return p
 
-
 def PLAIN(t, size=10.5):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(1)
     _f(p.add_run(t), "宋体", size)
     return p
-
 
 # ============================ 首部 ============================
 TITLE("计算机软件合作开发协议")

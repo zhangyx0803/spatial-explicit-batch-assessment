@@ -13,7 +13,6 @@ if os.path.isdir(_v):
 
 FAIL = 0
 
-
 def step(name, fn):
     global FAIL
     try:
@@ -23,19 +22,16 @@ def step(name, fn):
         FAIL += 1
         print("  [FAIL] %-22s %s: %s" % (name, type(exc).__name__, exc))
 
-
 print("=" * 62)
-print("空间显式批量评估工作台 —— 环境自检")
+print("空间显式批量评估工作台 - 环境自检")
 print("=" * 62)
 print("Python %s" % sys.version.split()[0])
 
 print("\n[1] 必需依赖")
 
-
 def _dep():
     import docx, numpy, openpyxl, pandas, PIL  # noqa: F401
     return "numpy %s / pandas %s" % (numpy.__version__, pandas.__version__)
-
 
 step("numpy pandas 等", _dep)
 
@@ -49,21 +45,18 @@ for name in ("scipy", "pyogrio", "shapely"):
 
 print("\n[3] 核心模块")
 
-
 def _mods():
     import seba.bundle, seba.centralplace, seba.intake, seba.vec  # noqa: F401
     return "vec / intake / centralplace / bundle"
 
-
 step("模块导入", _mods)
 
 print("\n[4] 数据包")
-p = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "demo_xuhui.bundle")
+p = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "districts/徐汇区.bundle")
 if not os.path.exists(p):
     print("  [FAIL] 数据包不存在：%s" % p)
     FAIL += 1
 else:
-
 
     def _bundle():
         from seba.bundle import load_bundle

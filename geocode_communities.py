@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""小区名 → 经纬度（高德开放平台 POI 搜索）。
+"""小区名 -> 经纬度（高德开放平台 POI 搜索）。
 
-为什么需要这一步：手工整理房价时最容易记的是“小区名 + 单价”，
+为什么需要这一步：手工整理房价时最容易记的是小区名 + 单价，
 最难弄的是经纬度。高德提供免费的地理编码/POI 检索接口，
 个人开发者每天 5000 次，够采几千个小区。
 
 准备：
   1. 注册 https://lbs.amap.com/ （免费）
-  2. 控制台 → 应用管理 → 创建应用 → 添加 Key → 服务平台选“Web服务”
+  2. 控制台 -> 应用管理 -> 创建应用 -> 添加 Key -> 服务平台选Web服务
   3. 把 Key 填到下面的命令里
 
 用法：
   set AMAP_KEY=你的key
   python geocode_communities.py 小区名表.csv --city 上海
 
-输入 CSV 只需一列“小区名”（也可以有单价、区县等其他列，不影响）。
+输入 CSV 只需一列小区名（也可以有单价、区县等其他列，不影响）。
 输出：在原表基础上补 lon / lat 两列，另存为新文件。
 """
 from __future__ import annotations
@@ -33,7 +33,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 AMAP_TEXT = "https://restapi.amap.com/v3/place/text"
 CACHE_NAME = "_geocode_cache.json"
 
-
 def load_cache(path: str) -> dict:
     if os.path.exists(path):
         try:
@@ -42,13 +41,11 @@ def load_cache(path: str) -> dict:
             return {}
     return {}
 
-
 def save_cache(path: str, cache: dict) -> None:
     try:
         json.dump(cache, open(path, "w", encoding="utf-8"), ensure_ascii=False)
     except Exception:
         pass
-
 
 def search(key: str, name: str, city: str, citylimit: bool = True):
     """返回 (lon, lat, 匹配到的名称, 类型) 或 (None, None, '', '')"""
@@ -70,7 +67,7 @@ def search(key: str, name: str, city: str, citylimit: bool = True):
     pois = data.get("pois") or []
     if not pois:
         return None, None, "", ""
-    # 优先“住宅区”类，否则取第一个
+    # 优先住宅区类，否则取第一个
     best = None
     for p in pois:
         t = str(p.get("type") or "")
@@ -84,7 +81,6 @@ def search(key: str, name: str, city: str, citylimit: bool = True):
         return None, None, "", ""
     lon_s, lat_s = loc.split(",")[:2]
     return float(lon_s), float(lat_s), str(best.get("name") or ""), str(best.get("type") or "")
-
 
 def read_csv(path: str):
     raw = open(path, "rb").read()
@@ -107,7 +103,6 @@ def read_csv(path: str):
     rows = list(csv.reader(io.StringIO("\n".join(lines)), delimiter=delim))
     return rows[0], rows[1:]
 
-
 def pick(cols, cands):
     for c in cands:
         for i, col in enumerate(cols):
@@ -118,7 +113,6 @@ def pick(cols, cands):
             if c in col.strip():
                 return i
     return -1
-
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -137,9 +131,9 @@ def main() -> int:
         print("""
   获取方式（免费，5 分钟）：
     1. 打开 https://lbs.amap.com/  注册并登录
-    2. 控制台 → 应用管理 → 我的应用 → 创建新应用
-       （名称随便填，比如“批量评估研究”，类型选“出行”）
-    3. 点“添加 Key”，服务平台必须选【Web服务】
+    2. 控制台 -> 应用管理 -> 我的应用 -> 创建新应用
+       （名称随便填，比如批量评估研究，类型选出行）
+    3. 点添加 Key，服务平台必须选【Web服务】
     4. 复制那串 Key，然后运行：
 
          set AMAP_KEY=你的key
@@ -159,11 +153,11 @@ def main() -> int:
     i_lon = pick(cols, ["经度", "lon", "lng"])
     i_lat = pick(cols, ["纬度", "lat"])
     if i_name < 0:
-        print("[错误] 找不到“小区名”列。当前列：%s" % cols)
+        print("[错误] 找不到小区名列。当前列：%s" % cols)
         return 2
 
     print("=" * 66)
-    print("  小区名 → 经纬度    （高德 POI 检索）")
+    print("  小区名 -> 经纬度    （高德 POI 检索）")
     print("=" * 66)
     print("  输入：%s（%d 行）" % (os.path.basename(args.csv), len(rows)))
     print("  城市：%s    限速：%.2fs/次" % (args.city, args.delay))
@@ -178,7 +172,7 @@ def main() -> int:
     t0 = time.time()
     todo = rows if not args.limit else rows[: args.limit]
 
-    print("\n  开始……\n")
+    print("\n  开始......\n")
     for n, r in enumerate(todo, 1):
         name = r[i_name].strip() if i_name < len(r) else ""
         if not name:
@@ -214,14 +208,14 @@ def main() -> int:
             cache[name] = [lon, lat]
             out_rows.append(list(r) + [lon, lat])
             hit += 1
-            flag = "" if matched == name else "  → 匹配为“%s”" % matched
+            flag = "" if matched == name else "  -> 匹配为%s" % matched
             print("  [%3d] %-24s %.6f, %.6f%s" % (n, name[:24], lon, lat, flag))
 
         if n % 20 == 0:
             save_cache(cache_path, cache)
             rate = (time.time() - t0) / n
             left = (len(todo) - n) * rate
-            print("      —— 进度 %d/%d，已用 %.0fs，预计还需 %.0fs ——"
+            print("      - 进度 %d/%d，已用 %.0fs，预计还需 %.0fs -"
                   % (n, len(todo), time.time() - t0, left))
         time.sleep(args.delay)
 
@@ -242,7 +236,6 @@ def main() -> int:
     print("    python import_prices.py \"%s\" --district 徐汇区" % out)
     print("=" * 66)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

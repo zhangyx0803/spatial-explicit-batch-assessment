@@ -2,7 +2,7 @@
 """为上海 16 个区各生成一个精简数据包，供网页版切换。
 
 产物：
-    data/districts/<区名>.bundle     每个约 0.8–2 MB
+    data/districts/<区名>.bundle     每个约 0.8-2 MB
     data/districts/_index.json       区名、单元数、成交数、R²
 """
 from __future__ import annotations
@@ -19,7 +19,6 @@ if os.path.isdir(_v):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "data", "districts")
-
 
 def main() -> int:
     import numpy as np
@@ -92,7 +91,6 @@ def main() -> int:
 
     print("\n完成 %d 个区，总用时 %.1f 分钟" % (len(index), (time.time() - t_all) / 60))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

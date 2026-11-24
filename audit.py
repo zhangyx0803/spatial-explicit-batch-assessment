@@ -13,12 +13,10 @@ if os.path.isdir(_v):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-
 def line(t):
     print("\n" + "=" * 78)
     print(" " + t)
     print("=" * 78)
-
 
 def main() -> int:
     import numpy as np
@@ -27,12 +25,12 @@ def main() -> int:
     line("1. 内置演示场景能否跑通（不依赖原始数据）")
     from seba.config import ProjectConfig
     from seba.engine import FactorEngine
-    from seba.grid import build_demo_dataset
+    from seba.grid import build_test_dataset
     from seba.stats import fit_and_evaluate
 
     cfg = ProjectConfig.from_yaml(
         open(os.path.join(HERE, "config", "factors.yaml"), encoding="utf-8").read())
-    sc = build_demo_dataset(seed=20261117, nx=30, ny=30, cell=250)
+    sc = build_test_dataset(seed=20261117, nx=30, ny=30, cell=250)
     eng = FactorEngine(cfg, sc.dataset)
     rep = eng.run()
     print("  因子计算：%d 个，用时 %.1fs" % (len(sc.dataset.attrs), getattr(rep, "total_seconds", getattr(rep, "elapsed", 0.0))))
@@ -75,7 +73,7 @@ def main() -> int:
         if const:
             tag.append("恒定 " + ",".join(const))
         print("  %-8s %6d %6d %5d  %s" % (d, ds.n_units, ds.n_obs(), len(ds.attrs),
-                                          "；".join(tag) if tag else "—"))
+                                          "；".join(tag) if tag else "-"))
         if miss or const:
             problems.append((d, miss, const))
 
@@ -121,7 +119,6 @@ def main() -> int:
     print("  16 区数据包：%d 区存在缺失或恒定因子" % len(problems))
     print("  拆解失败总数：%d" % fail)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

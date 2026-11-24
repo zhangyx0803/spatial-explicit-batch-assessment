@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""生成软著登记的“源程序鉴别材料”：前 30 页 + 后 30 页，每页 50 行。
+"""生成软著登记的源程序鉴别材料：前 30 页 + 后 30 页，每页 50 行。
 
 格式要点（按中国版权保护中心通行要求）：
-    · 页眉标注软件全称与版本号
-    · 每页 50 行（不含空行），行首连续行号
-    · 连续页码
-    · 不含第三方库代码（vendor）、数据文件与本地配置
+    * 页眉标注软件全称与版本号
+    * 每页 50 行（不含空行），行首连续行号
+    * 连续页码
+    * 不含第三方库代码（vendor）、数据文件与本地配置
 """
 import os
 
@@ -41,7 +41,6 @@ ORDER_HINT = [
     "config/factors.yaml", "config/factors_real.yaml",
 ]
 
-
 def collect():
     """按逻辑顺序收集代码行（剔除空行与第三方目录）。"""
     files = []
@@ -72,7 +71,6 @@ def collect():
                 lines.append(t)
     return files, lines
 
-
 def setup(wid):
     s = wid.sections[0]
     # 横向 A4：源代码行较长，纵向 8pt 会大量折行，导致 60 页变成 61 页
@@ -102,8 +100,6 @@ def setup(wid):
     hr._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
     add_footer(s)
 
-
-
 def _field(par, instr):
     """插入 Word 域（PAGE / NUMPAGES）。"""
     run = par.add_run()
@@ -121,7 +117,6 @@ def _field(par, instr):
     run.font.name = "宋体"
     run.font.size = Pt(9)
     run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-
 
 def add_footer(sec):
     sec.footer_distance = Cm(0.6)
@@ -142,7 +137,6 @@ def add_footer(sec):
     r3.font.size = Pt(9)
     r3._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
 
-
 def emit(wid, lines, start_no):
     n = len(lines)
     no = start_no
@@ -157,7 +151,6 @@ def emit(wid, lines, start_no):
             p.add_run().add_break(WD_BREAK.PAGE)
     return no
 
-
 def main() -> int:
     files, lines = collect()
     n = len(lines)
@@ -166,9 +159,9 @@ def main() -> int:
     tail = lines[-need:]
     print("收录 %d 个文件，非空行 %d 行（约 %.0f 页 / 每页 %d 行）"
           % (len(files), n, n / PAGE_LINES, PAGE_LINES))
-    print("取前 %d 行 + 后 %d 行 → %d 页" % (len(head), len(tail), 2 * N_PAGES_EACH))
+    print("取前 %d 行 + 后 %d 行 -> %d 页" % (len(head), len(tail), 2 * N_PAGES_EACH))
     if n < need * 2:
-        print("⚠ 不足 %d 行，应提交全部源码" % (need * 2))
+        print(" 不足 %d 行，应提交全部源码" % (need * 2))
 
     doc = Document()
     setup(doc)
@@ -181,7 +174,6 @@ def main() -> int:
     print("已生成：%s" % OUT)
     print("大小：%.1f KB" % (os.path.getsize(OUT) / 1024))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,12 +1,12 @@
-# 空间显式批量评估工作台 —— 工程配置示例
+# 空间显式批量评估工作台 - 工程配置
 # 因子由这份声明驱动：引擎解析、拓扑排序、执行空间算子 DAG、结果缓存。
 # 新增因子只需在这里加一段，不改引擎代码。
 
 project:
-  name: 演示区空间显式批量评估
+  name: 测试区空间显式批量评估
   crs: CGCS2000_3_degree_zone
   area_of_interest:
-    name: 演示研究区
+    name: 测试研究区
     nx: 40
     ny: 40
     cell_m: 250
@@ -258,7 +258,7 @@ factors:
     outputs: [value]
     note: 所在楼层 / 总层数
 
-  # 盲合成的对照因子（与价格无因果关系）
+  # 盲测的对照因子（与价格无因果关系）
   - code: b_placebo_1
     op: attribute
     inputs:

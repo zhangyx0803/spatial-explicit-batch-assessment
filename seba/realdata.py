@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""真实地理数据装配：上海村界 + 真实路网 + 土地利用 → 评估单元与因子。
+"""真实地理数据装配：上海村界 + 真实路网 + 土地利用 -> 评估单元与因子。
 
 不依赖 geopandas / shapely / rasterio，几何运算全部用 numpy 实现。
 
@@ -31,7 +31,7 @@ __all__ = ["RealDataError", "DATA_ROOT", "DISTRICT_PRICE",
 def _resolve_data_root() -> str:
     """数据根目录：环境变量 > 本地镜像 > 原始位置。
 
-    本地镜像用于摆脱移动硬盘依赖——把用到的几份数据按相同相对路径
+    本地镜像用于摆脱移动硬盘依赖-把用到的几份数据按相同相对路径
     拷到本地盘即可，代码无需改动。
     """
     cands = [
@@ -43,7 +43,6 @@ def _resolve_data_root() -> str:
         if c and os.path.isdir(c):
             return c
     return cands[-1]
-
 
 DATA_ROOT = _resolve_data_root()
 
@@ -71,7 +70,6 @@ _DEFAULT_SOURCE = {
 
 SOURCE = dict(_DEFAULT_SOURCE)
 
-
 def configure(**kw):
     """覆盖数据源配置（路径、字段、参考价）。"""
     for k, v in kw.items():
@@ -84,7 +82,6 @@ def configure(**kw):
     _reload_paths()
     return SOURCE
 
-
 def load_datasource(path: str):
     """从 JSON 载入其他城市的数据源配置。"""
     import json
@@ -92,7 +89,6 @@ def load_datasource(path: str):
     with open(path, "r", encoding="utf-8") as fh:
         cfg = json.load(fh)
     return configure(**cfg)
-
 
 def _reload_paths():
     global P_VILLAGE, P_ROADS, P_LANDUSE, GDB_ZIP, DISTRICT_PRICE, RAIL_EXCLUDE
@@ -104,7 +100,6 @@ def _reload_paths():
         DISTRICT_PRICE = dict(SOURCE["price_by_district"])
     if SOURCE.get("rail_exclude"):
         RAIL_EXCLUDE = tuple(SOURCE["rail_exclude"])
-
 
 P_VILLAGE = SOURCE["village"]
 P_ROADS = SOURCE["roads"]
@@ -134,7 +129,7 @@ if os.path.exists(_AUTO):
 DISTRICT_PRICE = {
     # 上海市分区二手住宅中位挂牌单价（元/㎡）
     # 数据来源：GitHub 公开数据集（链家/安居客挂房源快照，共 47,939 条，覆盖 16 区）
-    # 说明：为挂牌价而非成交价；本系统仅用它作为合成价格的水平锚点，
+    # 说明：为挂牌价而非成交价；本系统仅用它作为估算价格的水平锚点，
     #       挂牌相对成交的固定溢价不影响回归系数（见实现方案相关论证）。
     "黄浦区": 89012.0, "徐汇区": 80835.0, "长宁区": 74092.0, "虹口区": 68270.0,
     "静安区": 68132.0, "杨浦区": 67984.0, "普陀区": 64116.0, "浦东新区": 60340.0,
@@ -142,7 +137,7 @@ DISTRICT_PRICE = {
     "青浦区": 36630.0, "奉贤区": 26966.0, "金山区": 18611.0, "崇明区": 17714.0,
 }
 
-# 土地利用分类：fclass → 三分类
+# 土地利用分类：fclass -> 三分类
 GREEN_CLS = {"park", "grass", "forest", "garden", "green", "wood", "绿地", "公园",
              "meadow", "scrub", "orchard", "vineyard", "allotments",
              "recreation_ground", "heath"}
@@ -152,7 +147,7 @@ BUILT_CLS = {"residential", "industrial", "commercial", "retail", "school",
 
 GDB_ZIP = os.path.join(DATA_ROOT, r"OSM_2014_2025\osm中国分省20260922\osm_china_gdb_zip\上海.gdb.zip")
 
-# 商业设施（OSM POI 分类）→ "商场多不多"
+# 商业设施（OSM POI 分类）-> "商场多不多"
 SHOP_CLS = {
     "mall", "marketplace", "department_store", "supermarket", "convenience",
     "clothes", "shoes", "bag", "jewelry", "sports", "toys", "books", "stationery",
@@ -163,26 +158,23 @@ SHOP_CLS = {
 # 排除火车站，剩下的 railway_station 当作轨道站（上海 OSM 里地铁站多以此分类）
 RAIL_EXCLUDE = ("火车站", "虹桥站", "上海站", "上海南站", "上海西站", "南翔北站")
 
-
 RES_MIN_SHARE = 0.30   # 居住用地占比低于此值且名称非居委时，判为非住宅单元
 
 # 名称明显属于非住宅用途的关键词（公园、商业、学校、办公等）
-# “地块”单独列出：村界数据里有一批“商业/工业地块（五）”这类单元，
-# 名称不含“商业/工业”以外的设施词，但显然是经营性用地，不能当住宅。
+# 地块单独列出：村界数据里有一批商业/工业地块（五）这类单元，
+# 名称不含商业/工业以外的设施词，但显然是经营性用地，不能当住宅。
 _NONRES_NAME = re.compile(
     "公园|学校|大学|中学|小学|幼儿园|医院|公司|集团|基地|广场|办事处|街道办|"
     "政府|车站|机场|市场|陵园|公墓|寺|庙|产业园|工业园|园区|商场|商厦|大厦$|"
     "商业|工业|办公|商务|研发|仓储|物流|厂房|车间|地块|楼宇|"
     "客运站|地铁|车辆段|水厂|电厂|变电")
-# 名称属于居委/村委会的（优先于上面的泛化关键词，避免“交通公园居委”被误判）
+# 名称属于居委/村委会的（优先于上面的泛化关键词，避免交通公园居委被误判）
 _JW_NAME = re.compile("居委|居委会|村委会|村委|居民区|社区")
 ROAD_TRUNK = {"motorway", "trunk", "primary", "motorway_link", "trunk_link", "primary_link"}
 ROAD_SECOND = {"secondary", "tertiary", "secondary_link", "tertiary_link"}
 
-
 class RealDataError(RuntimeError):
     pass
-
 
 @dataclass
 class BuildReport:
@@ -202,7 +194,6 @@ class BuildReport:
     road_density_mean: float = 0.0
     notes: List[str] = field(default_factory=list)
 
-
 # 读数据
 
 def list_districts() -> List[Tuple[str, int]]:
@@ -211,17 +202,15 @@ def list_districts() -> List[Tuple[str, int]]:
     c = Counter(x for x in sf.attrs.get(SOURCE["fields"]["village_district"], []) if x)
     return sorted(c.items(), key=lambda kv: -kv[1])
 
-
 def _project_rings(rings: List[np.ndarray], lat0: float, lon0: float) -> List[np.ndarray]:
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     return [np.column_stack([(r[:, 0] - lon0) * kx, (r[:, 1] - lat0) * ky]) for r in rings]
 
-
 def _load_units(district: str, rep: BuildReport):
     sf = read_vector(P_VILLAGE)
     if not sf.attrs.get("所属区e"):
-        raise RealDataError("村界数据缺少“所属区县”字段")
+        raise RealDataError("村界数据缺少所属区县字段")
     all_d = sf.attrs[SOURCE["fields"]["village_district"]]
     idx = list(range(len(all_d))) if not district else [i for i, v in enumerate(all_d) if v == district]
     if not idx:
@@ -254,7 +243,6 @@ def _load_units(district: str, rep: BuildReport):
     return (np.array(ids), np.array(names), np.array(streets), np.array(cx), np.array(cy),
             np.array(areas), rings_all, lat0, lon0, np.array(jw))
 
-
 def _lattice_shapefile(bbox, step_m: float = 0.0, lat0: float = None, lon0: float = None):
     """没有路网数据时，在内存里造一个规则格网（经纬度），让后续流程原样跑通。
 
@@ -285,7 +273,6 @@ def _lattice_shapefile(bbox, step_m: float = 0.0, lat0: float = None, lon0: floa
                      attrs={"fclass": ["secondary"] * n, "oneway": ["B"] * n},
                      prj='GEOGCS["WGS 84"]', n=n)
 
-
 def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0,
                 lat0: float = None, lon0: float = None):
     """读路网、裁剪、拓扑清洗、取最大连通分量。
@@ -295,7 +282,7 @@ def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0,
     """
     if not P_ROADS or not os.path.exists(P_ROADS):
         sf = _lattice_shapefile(bbox, lat0=lat0, lon0=lon0)
-        rep.notes.append("⚠ 未提供路网数据，已用自适应规则格网近似；道路可达性精度会下降")
+        rep.notes.append(" 未提供路网数据，已用自适应规则格网近似；道路可达性精度会下降")
     else:
         sf = read_vector(P_ROADS)
     if lat0 is None or lon0 is None:
@@ -305,7 +292,7 @@ def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0,
     kx = 111320.0 * math.cos(math.radians(lat0))
     ky = 110540.0
     x0, y0, x1, y1 = bbox
-    # 研究区外扩：必须把 CBD 等目的地包进来，否则远郊区算出来的不是“到 CBD 时间”。
+    # 研究区外扩：必须把 CBD 等目的地包进来，否则远郊区算出来的不是到 CBD 时间。
     # 默认 15 km；若城市中心在 15 km 之外（奉贤/金山/崇明等），按需扩展。
     if pad <= 0:
         pad = 15000.0  # 研究区外扩 15 km：必须把 CBD 等目的地包进来，否则算的不是"到 CBD"
@@ -369,12 +356,11 @@ def _load_roads(bbox, rep: BuildReport, tol_m: float = 8.0, pad: float = 0.0,
     # 最大连通分量
     keep = _largest_component_mask(g)
     rep.notes.append(
-        "路网：%d 段 → %d 节点 / %d 边，连通分量 %d 个，最大占 %.1f%%；可达性只用最大连通分量（%d 节点）"
+        "路网：%d 段 -> %d 节点 / %d 边，连通分量 %d 个，最大占 %.1f%%；可达性只用最大连通分量（%d 节点）"
         % (rep.n_road_segments, rep.n_nodes, rep.n_edges, rep.n_components,
            rep.largest_share * 100, int(keep.sum()))
     )
     return g, keep, segs, cls
-
 
 def _largest_component_mask(g: CSRGraph) -> np.ndarray:
     n = g.n_nodes
@@ -397,10 +383,9 @@ def _largest_component_mask(g: CSRGraph) -> np.ndarray:
     big = vals[int(np.argmax(counts))]
     return roots == big
 
-
 def _load_landuse(bbox, rep: BuildReport, lat0: float = None, lon0: float = None):
     if not P_LANDUSE or not os.path.exists(P_LANDUSE):
-        rep.notes.append("⚠ 未提供土地利用数据，绿地率/建设用地/商业用地占比三项因子将缺失")
+        rep.notes.append(" 未提供土地利用数据，绿地率/建设用地/商业用地占比三项因子将缺失")
         return []
     sf = read_vector(P_LANDUSE)
     # 必须与评估单元用同一坐标基准，否则地块会整体偏移（换城市时偏移可达上千公里）
@@ -427,11 +412,9 @@ def _load_landuse(bbox, rep: BuildReport, lat0: float = None, lon0: float = None
     rep.notes.append("土地利用：研究区及周边 %d 个地块" % len(out))
     return out
 
-
 # OSM POI / 交通点（从 FileGDB 读，只有装了 pyogrio 才可用）
 
 _GDB_DIR = None
-
 
 def _gdb_path() -> str:
     global _GDB_DIR
@@ -450,9 +433,8 @@ def _gdb_path() -> str:
     _GDB_DIR = target
     return target
 
-
 def _parse_points(wkb_list):
-    """WKB Point → (x, y) 数组。"""
+    """WKB Point -> (x, y) 数组。"""
     import struct as _st
 
     xs = np.empty(len(wkb_list), dtype=float)
@@ -463,7 +445,6 @@ def _parse_points(wkb_list):
             continue
         xs[i], ys[i] = _st.unpack("<dd", w[5:21])
     return xs, ys
-
 
 def reload_source(path: str = "") -> Dict:
     """重新读取 config/datasource.json，立刻生效（免重启）。"""
@@ -492,7 +473,6 @@ def reload_source(path: str = "") -> Dict:
         DISTRICT_PRICE = dict(SOURCE["price_by_district"])
     return SOURCE
 
-
 def source_summary() -> Dict:
     """当前数据源的可用性检查（给界面显示）。"""
     def ok(p):
@@ -507,9 +487,8 @@ def source_summary() -> Dict:
         "fields": dict(SOURCE.get("fields", {})),
     }
 
-
 def _lattice_network(x0, y0, x1, y1, step=400.0):
-    """没有路网数据时，用规则格网近似——保证可达性因子仍能算出来，并在报告里注明。"""
+    """没有路网数据时，用规则格网近似-保证可达性因子仍能算出来，并在报告里注明。"""
     segs = []
     cls = []
     xs = np.arange(x0, x1 + 1e-6, step)
@@ -521,7 +500,6 @@ def _lattice_network(x0, y0, x1, y1, step=400.0):
         segs.append((np.array([x0, x1]), np.array([y, y])))
         cls.append(2)
     return segs, cls
-
 
 def load_osm_points(layer: str, keep: set = None, exclude_names: tuple = ()):
     """读 GDB 点图层，返回 (x, y, name, fclass)。经纬度原样返回。"""
@@ -545,7 +523,6 @@ def load_osm_points(layer: str, keep: set = None, exclude_names: tuple = ()):
             keep_mask &= (np.char.find(nm_arr, kw) < 0)
     return xs[keep_mask], ys[keep_mask], np.array([str(v or "") for v in nm])[keep_mask], fc[keep_mask]
 
-
 # 栅格化与邻域聚合
 
 def _rings_hit(px, py, rings) -> np.ndarray:
@@ -560,7 +537,6 @@ def _rings_hit(px, py, rings) -> np.ndarray:
             continue
         out |= points_in_rings(px, py, [r])
     return out
-
 
 def _rasterize_mask(rings_list, grid_x, grid_y, shape) -> np.ndarray:
     """把多边形集合栅格成 0/1 掩膜（按网格中心点判定）。"""
@@ -580,7 +556,6 @@ def _rasterize_mask(rings_list, grid_x, grid_y, shape) -> np.ndarray:
         if hit.any():
             mask.ravel()[idx[hit]] = True
     return mask
-
 
 def _disc_mean(values: np.ndarray, radius_cells: int, valid: Optional[np.ndarray] = None) -> np.ndarray:
     """圆盘邻域均值（用位移累加实现，避免依赖 scipy）。"""
@@ -604,9 +579,8 @@ def _disc_mean(values: np.ndarray, radius_cells: int, valid: Optional[np.ndarray
             cnt += mshift
     return np.divide(acc, np.maximum(cnt, 1e-9))
 
-
 def _simplify(pts, tol):
-    """Douglas-Peucker 折线简化。"""
+    """Douglas-Peucker 折线抽稀。"""
     pts = np.asarray(pts, dtype=float)
     if pts.shape[0] <= 2:
         return pts
@@ -632,9 +606,8 @@ def _simplify(pts, tol):
             stack.append((a + k, b))
     return pts[keep]
 
-
 def _pack(lines, tol, digits=1):
-    """折线列表 -> [[x1,y1,x2,y2,...], ...]，先简化再取整。"""
+    """折线列表 -> [[x1,y1,x2,y2,...], ...]，先抽稀再取整。"""
     out = []
     for pts in lines:
         q = _simplify(pts, tol)
@@ -647,18 +620,16 @@ def _pack(lines, tol, digits=1):
         out.append(flat)
     return out
 
-
 # 主流程
 
 def _norm_jw(t: str) -> str:
-    """居委名归一：去掉“居委会/居委”后缀与空白。"""
+    """居委名归一：去掉居委会/居委后缀与空白。"""
     t = str(t).strip()
     for suf in ("居民委员会", "居委会", "居委"):
         if t.endswith(suf):
             t = t[: -len(suf)]
             break
     return t.replace(" ", "")
-
 
 def _load_community_lonlat():
     """读取已地理编码的小区（lon/lat），按区县分组；无文件则返回 {}。"""
@@ -684,7 +655,6 @@ def _load_community_lonlat():
             out.setdefault((r.get("区县") or "").strip(), []).append((lon, lat, pri))
     return out
 
-
 def _load_real_unit_prices(district: str, cx, cy, lat0: float, lon0: float,
                            radius: float = 800.0):
     """把小区按本区投影基准换算后匹配到评估单元，返回每单元的中位价（无则 NaN）。
@@ -708,9 +678,8 @@ def _load_real_unit_prices(district: str, cx, cy, lat0: float, lon0: float,
             out[i] = float(np.median(pv[m]))
     return out
 
-
 def build_catchment(table_path: str):
-    """从官方对口表构建“居委短名 → (学校名, 班级数, 是否集团化)”。"""
+    """从官方对口表构建居委短名 -> (学校名, 班级数, 是否集团化)。"""
     import csv as _csv
 
     if not table_path or not os.path.exists(table_path):
@@ -727,7 +696,6 @@ def build_catchment(table_path: str):
             if k:
                 out[k] = (r.get("学校名称", ""), float(cnt) if cnt.isdigit() else float("nan"), grp)
     return out
-
 
 def match_catchment(jwnames, table_path):
     """把单元居委名匹配到对口学校；返回 (班级数, 集团化, 是否命中) 三个数组。"""
@@ -751,7 +719,6 @@ def match_catchment(jwnames, table_path):
                 hit[i] = True
                 break
     return cls, grp, hit
-
 
 def load_schools(name_table: str = "") -> dict:
     """从 OSM 面要素提取学校/幼儿园质心；可选地匹配官方学校名单补充属性。
@@ -820,7 +787,6 @@ def load_schools(name_table: str = "") -> dict:
     return {"x": xs, "y": ys, "name": nm, "kind": fc,
             "class_cnt": class_cnt, "group": group, "matched": 0}
 
-
 def build_district_dataset(
     district= "长宁区",
     cell_m: float = 100.0,
@@ -855,7 +821,7 @@ def build_district_dataset(
     d_cbd_node = float(np.min(np.hypot(graph.node_xy[:, 0] - cbd_pt[0, 0],
                                        graph.node_xy[:, 1] - cbd_pt[0, 1])))
     if d_cbd_node > 1500:
-        rep.notes.append("⚠ 人民广场距最近路网节点 %.0f 米，可达性因子可能失真（请扩大裁剪范围）" % d_cbd_node)
+        rep.notes.append(" 人民广场距最近路网节点 %.0f 米，可达性因子可能失真（请扩大裁剪范围）" % d_cbd_node)
     else:
         rep.notes.append("CBD 锚点已落在路网内（距最近节点 %.0f 米）" % d_cbd_node)
     landuse = _load_landuse((x0, y0, x1, y1), rep, lat0=lat0, lon0=lon0)
@@ -877,7 +843,7 @@ def build_district_dataset(
             poi_xy[key] = (px[m], py[m], nm[m])
             rep.notes.append("OSM %s：%d 个点（研究区及周边 3 km）" % (key, int(m.sum())))
     except RealDataError as exc2:
-        rep.notes.append("⚠ 未载入 OSM 点图层（%s），地铁与商业因子将缺失" % exc2)
+        rep.notes.append(" 未载入 OSM 点图层（%s），地铁与商业因子将缺失" % exc2)
 
     # 学区：学校点位（面要素质心）+ 官方招生规模
     sch = None
@@ -902,7 +868,7 @@ def build_district_dataset(
         rep.notes.append("学区：学校/幼儿园 %d 处（研究区周边 5 km），其中 %d 所匹配到官方招生规模"
                          % (int(m.sum()), sch.get("matched", 0)))
     except Exception as exc3:
-        rep.notes.append("⚠ 未载入学校图层（%s），学区因子将缺失" % exc3)
+        rep.notes.append(" 未载入学校图层（%s），学区因子将缺失" % exc3)
 
     # 单元级学区因子：到最近小学距离、800 m 内学校数、最近小学招生规模
     sch_dist = np.full(len(ids), np.nan)
@@ -1145,7 +1111,7 @@ def build_district_dataset(
          + 0.10 * _z(f_built))
     logp = np.log(base) + 0.44 * z + 0.12 * spatial + rng.standard_t(5, len(ids)) * 0.075
     price_pm2 = np.exp(logp)
-    # 水平校准：让合成价格的均值正好等于区级官方均价（对数正态会自带系统性上移）
+    # 水平校准：让估算价格的均值正好等于区级官方均价（对数正态会自带系统性上移）
     price_pm2 *= base / price_pm2.mean()
 
     # 按用地性质剔除非住宅单元
@@ -1154,8 +1120,8 @@ def build_district_dataset(
     _why = []
     for _i, _nm in enumerate(_names_arr):
         if _JW_NAME.search(_nm):
-            # 居委/村委会是住宅单元的强信号；即使名字里带“公园”“商业”等词，
-            # 也优先按住宅处理（例如“交通公园居委”）。
+            # 居委/村委会是住宅单元的强信号；即使名字里带公园商业等词，
+            # 也优先按住宅处理（例如交通公园居委）。
             is_res[_i] = True
         elif _NONRES_NAME.search(_nm):
             is_res[_i] = False
@@ -1178,8 +1144,8 @@ def build_district_dataset(
                          % (int(np.isfinite(real_arr).sum()), len(ids), real_cov * 100))
     else:
         has = rng.random(len(ids)) < obs_share
-        _src = "合成（水平锚定区级均价）"
-        rep.notes.append("价格：真实小区价覆盖率仅 %.0f%%，本区仍用合成价格"
+        _src = "估算（水平锚定区级均价）"
+        rep.notes.append("价格：真实小区价覆盖率仅 %.0f%%，本区仍用估算价格"
                          % (real_cov * 100))
     has = has & is_res
     idx = np.nonzero(has)[0]
@@ -1239,10 +1205,10 @@ def build_district_dataset(
     if "metro" in poi_xy and poi_xy["metro"][0].size:
         rep.notes.append("地铁可达性：到最近站中位 %.1f 分钟（真实路网最短路）" % float(np.median(t_metro)))
     rep.notes.append("商业设施：1 km 内平均 %.1f 个" % float(shop_cnt.mean()))
-    if _src.startswith("合成"):
+    if _src.startswith("估算"):
         rep.notes.append("价格：水平锚定 %s 2024 年二手住宅网签均价 %.0f 元/㎡"
                          "（区内差异由真实因子驱动）" % (district or "全市加权", base))
-    # 底图（简化后供前端绘制）
+    # 底图（抽稀后供前端绘制）
     bm = {"boundaries": [], "roads": [], "centers": [], "unit_polys": [], "water": []}
     big = len(ids) > 1500          # 全市尺度不逐块画，否则传输体积过大
 
@@ -1352,20 +1318,18 @@ def build_district_dataset(
             bm["centers"] = []
     ds.basemap = bm
 
-    if _src.startswith("合成"):
-        rep.notes.append("成交：%d 条（%.0f%% 单元有观测），为合成数据，仅用于验证方法链路"
+    if _src.startswith("估算"):
+        rep.notes.append("成交：%d 条（%.0f%% 单元有观测），为生成数据，仅用于验证方法链路"
                          % (idx.size, obs_share * 100))
     else:
-        rep.notes.append("成交：%d 条，采用小区级真实挂牌价，非合成数据"
+        rep.notes.append("成交：%d 条，采用小区级真实挂牌价，非生成数据"
                          % idx.size)
     return ds, rep
-
 
 def _z(v: np.ndarray) -> np.ndarray:
     v = np.asarray(v, dtype=float)
     sd = v.std()
     return (v - v.mean()) / sd if sd > 0 else v * 0.0
-
 
 def _smooth_xy(x: np.ndarray, y: np.ndarray, rng, waves: int = 4) -> np.ndarray:
     """二维平滑场：几组不同波长与方向的余弦叠加，保证在空间上连续（这样才能检验空间诊断）。"""

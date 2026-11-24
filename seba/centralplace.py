@@ -5,11 +5,11 @@
   1. 商业设施按等级赋权（购物中心 > 超市 > 便利店）
   2. 在三个尺度上分别做核密度估计（4 km / 2 km / 1 km）
   3. 多尺度峰值检测：在某尺度上仍是局部极大且强度过阈值，才算一级中心地
-       - 4 km 尺度仍显著 → 市级中心地（最高级）
-       - 2 km 尺度显著    → 区级中心地
-       - 1 km 尺度显著    → 社区级中心地
+       - 4 km 尺度仍显著 -> 市级中心地（最高级）
+       - 2 km 尺度显著    -> 区级中心地
+       - 1 km 尺度显著    -> 社区级中心地
      这正是"高级中心地数量少、腹地大"的定量表达
-  4. 用级别加权做重力可达性：A_i = Σ_k w_k · exp(-β·t_ik)
+  4. 用级别加权做重力可达性：A_i = Σ_k w_k * exp(-β*t_ik)
   5. 用 k=3 体系检验：相邻级别数量比应接近 3，腹地半径比应接近 √3
 
 Christaller 的 k=3（市场原则）在数量上表现为 1 : 3 : 9，
@@ -26,7 +26,6 @@ import numpy as np
 
 __all__ = ["CenterField", "detect_centers", "level_summary"]
 
-
 # 商业设施等级权重：中心地的"职能等级"由所提供商品/服务的档次决定
 POI_WEIGHT = {
     "mall": 6.0, "department_store": 6.0, "marketplace": 4.0,
@@ -35,7 +34,6 @@ POI_WEIGHT = {
     "convenience": 1.0, "bakery": 1.0, "greengrocer": 1.0, "butcher": 1.0,
     "pharmacy": 1.5, "chemist": 1.5, "books": 1.5, "stationery": 1.0,
 }
-
 
 @dataclass
 class Center:
@@ -46,7 +44,6 @@ class Center:
     n_poi: int              # 500 m 内商业设施数
     weight: float           # 级别权重（用于重力可达性）
     name: str = ""
-
 
 @dataclass
 class CenterField:
@@ -60,7 +57,6 @@ class CenterField:
         for c in self.centers:
             out[c.level].append(c)
         return out
-
 
 # 核密度：网格化 + 圆盘卷积
 
@@ -93,7 +89,6 @@ def _kde_on_grid(x, y, w, x0, y0, cell, nx, ny, bandwidth):
     out = irfft2(rfft2(pad) * rfft2(kk), s=(fy, fx))
     return out[r:r + ny, r:r + nx]
 
-
 def _local_maxima(grid, min_val, nms_cells):
     """局部极大值检测（非极大抑制窗口）。"""
     from numpy.lib.stride_tricks import sliding_window_view
@@ -107,7 +102,6 @@ def _local_maxima(grid, min_val, nms_cells):
     vals = grid[ys, xs]
     order = np.argsort(-vals)
     return list(zip(ys[order], xs[order], vals[order]))
-
 
 # 主流程
 
@@ -127,7 +121,7 @@ def detect_centers(
     """识别中心地并按职能强度分级。
 
     与"多尺度孤立度"相反：高级中心地的判据是职能强度高（商业设施又多又高档），
-    而不是在大带宽下更孤立。做法是单一带宽核密度 → 峰值 → 对 log(强度) 做一维三分聚类。
+    而不是在大带宽下更孤立。做法是单一带宽核密度 -> 峰值 -> 对 log(强度) 做一维三分聚类。
     """
     shop_x = np.asarray(shop_x, float)
     shop_y = np.asarray(shop_y, float)
@@ -185,7 +179,6 @@ def detect_centers(
     cf.stats = level_summary(cf)
     return cf
 
-
 def _kmeans1d(x: np.ndarray, k: int, iters: int = 60) -> np.ndarray:
     """一维 k-means（按分位数初始化，稳定且无需第三方库）。"""
     x = np.asarray(x, float)
@@ -204,7 +197,6 @@ def _kmeans1d(x: np.ndarray, k: int, iters: int = 60) -> np.ndarray:
                 centers[j] = x[m].mean()
     return labels
 
-
 def level_summary(cf: CenterField) -> Dict:
     """级别统计 + Christaller k=3 体系检验。"""
     by = cf.by_level()
@@ -222,7 +214,6 @@ def level_summary(cf: CenterField) -> Dict:
         stats["christaller_k3_fit"] = "接近 1:3:9" if (2.0 <= r21 <= 4.5 and 2.0 <= r32 <= 4.5) else "偏离 1:3:9（可能受地形/水系分割影响）"
     return stats
 
-
 # 分级加权可达性
 
 def center_gravity(
@@ -230,7 +221,7 @@ def center_gravity(
     beta: float = 0.08,
     level_w: Optional[Dict[int, float]] = None,
 ) -> np.ndarray:
-    """A_i = Σ_k w_k · exp(-β · t_ik)；t 为到最近该级别中心地的时间（分钟）。"""
+    """A_i = Σ_k w_k * exp(-β * t_ik)；t 为到最近该级别中心地的时间（分钟）。"""
     level_w = level_w or {1: 1.0, 2: 0.50, 3: 0.25}
     out = np.zeros_like(next(iter(unit_times.values())), dtype=float)
     for lvl, t in unit_times.items():
@@ -238,11 +229,10 @@ def center_gravity(
         out += level_w.get(lvl, 0.2) * np.exp(-beta * tt)
     return out
 
-
 def highest_level_reached(unit_times: Dict[int, np.ndarray], within_min: float = 30.0) -> np.ndarray:
     """在给定时限内可达的最高中心地级别（0 = 都没有）。"""
     out = np.zeros_like(next(iter(unit_times.values())), dtype=float)
-    for lvl in sorted(unit_times, reverse=True):     # 3 → 2 → 1，高级别覆盖低级别
+    for lvl in sorted(unit_times, reverse=True):     # 3 -> 2 -> 1，高级别覆盖低级别
         reach = unit_times[lvl] <= within_min
         out = np.where(reach, max(out.max(), lvl), out) if False else np.where(reach, float(lvl), out)
     return out

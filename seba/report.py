@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """成果输出：XLSX 明细表 + DOCX 校准报告。
 
-报告直接生成 DOCX（python-docx），不经过 markdown → PDF 的转换链：
+报告直接生成 DOCX（python-docx），不经过 markdown -> PDF 的转换链：
 中文字体、表格宽度与负号显示都更可控，也少一个出错环节。
 """
 
@@ -13,7 +13,6 @@ import numpy as np
 
 __all__ = ["write_workbook", "write_calibration_report"]
 
-
 # XLSX
 
 def write_workbook(path: str, sheets: Dict[str, "object"]) -> str:
@@ -23,7 +22,6 @@ def write_workbook(path: str, sheets: Dict[str, "object"]) -> str:
         for name, df in sheets.items():
             df.to_excel(xw, sheet_name=name[:31], index=False)
     return path
-
 
 # DOCX
 
@@ -41,7 +39,6 @@ def _set_cell(cell, text, bold=False, size=8.5, align_center=False):
     r.bold = bold
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
-
 
 def _add_table(doc, header: Sequence[str], rows: Sequence[Sequence], widths=None):
     from docx.shared import Inches
@@ -61,7 +58,6 @@ def _add_table(doc, header: Sequence[str], rows: Sequence[Sequence], widths=None
                 row.cells[i].width = Inches(w)
     return t
 
-
 def _kv_table(doc, pairs: Sequence[tuple]):
     t = doc.add_table(rows=0, cols=2)
     t.style = "Table Grid"
@@ -70,7 +66,6 @@ def _kv_table(doc, pairs: Sequence[tuple]):
         _set_cell(cells[0], k, bold=True)
         _set_cell(cells[1], v)
     return t
-
 
 def write_calibration_report(path: str, ctx: Dict) -> str:
     from docx import Document
@@ -95,9 +90,9 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
             ("成交样本数", format(ctx["n_obs"], ",")),
             ("数据时点", ctx["asof_date"]),
             ("单元面积", "%.0f m²" % ctx["cell_area"]),
-            ("吸附失败率", "—" if ctx.get("snap_failed") is None
+            ("吸附失败率", "-" if ctx.get("snap_failed") is None
              else "%.2f%%" % (ctx["snap_failed"] * 100)),
-            ("平均吸附距离", "—" if ctx.get("snap_mean_dist") is None
+            ("平均吸附距离", "-" if ctx.get("snap_mean_dist") is None
              else "%.1f m" % ctx["snap_mean_dist"]),
         ],
     )
@@ -151,7 +146,7 @@ def write_calibration_report(path: str, ctx: Dict) -> str:
             ("COD", "%.2f（阈值 ≤ %.0f，%s）" % (
                 ctx["ratio"]["cod"], ctx["ratio"]["cod_max"],
                 "通过" if ctx["ratio"]["cod_ok"] > 0 else "未通过")),
-            ("PRD", "%.4f（区间 %.2f–%.2f，%s）" % (
+            ("PRD", "%.4f（区间 %.2f-%.2f，%s）" % (
                 ctx["ratio"]["prd"], ctx["ratio"]["prd_low"], ctx["ratio"]["prd_high"],
                 "通过" if ctx["ratio"]["prd_ok"] > 0 else "未通过")),
         ],

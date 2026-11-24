@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""演示研究区与盲合成交易库。
+"""内置测试场景与盲测交易库。
 
-研究区：40 × 40 规则格网，每格 250 m，合计 10 km × 10 km（1600 个评估单元）。
+研究区：40 x 40 规则格网，每格 250 m，合计 10 km x 10 km（1600 个评估单元）。
 路网：与格网同构的棋盘路网，按主干道 / 次干道 / 支路分等级赋速，含单向边与尽端支路。
 
 关于价格生成（重要）：
@@ -21,16 +21,14 @@ import numpy as np
 from .datamodel import Dataset, Grid, LayerData, ObsTable, UnitTable
 from .net import CSRGraph, snap_points
 
-__all__ = ["build_demo_dataset", "DemoScene"]
-
+__all__ = ["build_test_dataset", "TestScene"]
 
 @dataclass
-class DemoScene:
+class TestScene:
     dataset: Dataset
     graph_drive: CSRGraph
     graph_walk: CSRGraph
     truth: Dict[str, float]
-
 
 def _smooth_field(nx: int, ny: int, rng: np.random.Generator, n_wave: int = 4) -> np.ndarray:
     """几组二维正弦叠加出的平滑场，用于空间随机效应。"""
@@ -48,13 +46,11 @@ def _smooth_field(nx: int, ny: int, rng: np.random.Generator, n_wave: int = 4) -
     sd = out.std()
     return out / sd if sd > 0 else out
 
-
 def _z(v: np.ndarray) -> np.ndarray:
     sd = v.std()
     return (v - v.mean()) / sd if sd > 0 else v * 0.0
 
-
-def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: float = 250.0) -> DemoScene:
+def build_test_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: float = 250.0) -> TestScene:
     rng = np.random.default_rng(seed)
     grid = Grid(nx=nx, ny=ny, cell=cell)
 
@@ -107,7 +103,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     cx, cy = grid.centroid(ix, iy)
 
     unit_id = np.array(["U%05d" % (k + 1) for k in range(n_units)])
-    # 行政区划：4×4 个统计单元（用于分区残差聚合与失配板块识别）
+    # 行政区划：4x4 个统计单元（用于分区残差聚合与失配板块识别）
     admin_code = np.array(["3101%02d" % (int(i) * 4 + int(j) // 10 + 1) for i, j in zip(ix // 10, iy)])
     area = np.full(n_units, grid.area, dtype=float)
 
@@ -312,7 +308,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
     deal_year = rng.choice([2023, 2024, 2025], size=n_obs, p=[0.2, 0.35, 0.45])
     deal_month = rng.integers(1, 13, size=n_obs)
     deal_date = np.array(["%04d-%02d-15" % (y, m) for y, m in zip(deal_year, deal_month)])
-    # 时间趋势：2023 → 2025 累计上涨约 8%
+    # 时间趋势：2023 -> 2025 累计上涨约 8%
     trend = 1.0 + 0.04 * (deal_year - 2023)
     unit_price_obs = price_pm2[obs_idx] * trend
     unit_area = 90.0
@@ -324,7 +320,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
         unit_price=unit_price_obs,
         deal_date=deal_date,
         price_type=np.array(["deal"] * n_obs),
-        source=np.array(["demo"] * n_obs),
+        source=np.array(["builtin"] * n_obs),
         weight=1.0 / trend,
     )
 
@@ -355,7 +351,7 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
         obs=obs,
         layers=layers,
         crs="CGCS2000",
-        project_name="演示区（合成数据）",
+        project_name="内置测试区",
         unit_attrs=unit_attrs,
     )
 
@@ -366,4 +362,4 @@ def build_demo_dataset(seed: int = 20261117, nx: int = 40, ny: int = 40, cell: f
         "重尾噪声（t5）标度": 0.09,
         "成交样本量": float(n_obs),
     }
-    return DemoScene(dataset=ds, graph_drive=graph_drive, graph_walk=graph_walk, truth=truth)
+    return TestScene(dataset=ds, graph_drive=graph_drive, graph_walk=graph_walk, truth=truth)

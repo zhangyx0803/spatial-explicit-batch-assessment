@@ -5,8 +5,8 @@
 不调用 osmnx 的图算法，只把 osmnx 当作数据下载器使用。
 
 提供两条求解路径：
-  dijkstra()                —— 节点图上的标准有界 Dijkstra（批量计算用，最快）
-  dijkstra_edge_expanded()  —— 边扩展图上的 Dijkstra，支持转向惩罚与禁左（精确计算用）
+  dijkstra()                - 节点图上的标准有界 Dijkstra（批量计算用，最快）
+  dijkstra_edge_expanded()  - 边扩展图上的 Dijkstra，支持转向惩罚与禁左（精确计算用）
 """
 
 from __future__ import annotations
@@ -31,14 +31,13 @@ except Exception:  # pragma: no cover
     _scipy_dijkstra = None
     HAS_SCIPY = False
 
-# 道路等级 → 各模式速度（m/min）
+# 道路等级 -> 各模式速度（m/min）
 SPEED_TABLE: Dict[str, Dict[int, float]] = {
     # 1 主干道 2 次干道 3 支路
     "drive": {1: 1000.0, 2: 666.7, 3: 416.7},   # 60 / 40 / 25 km/h
     "bike": {1: 250.0, 2: 250.0, 3: 250.0},     # 15 km/h
     "walk": {1: 80.0, 2: 80.0, 3: 80.0},        # 4.8 km/h
 }
-
 
 class CSRGraph:
     """有向图（双向边在建图时展开为两条），压缩稀疏行存储。"""
@@ -78,7 +77,7 @@ class CSRGraph:
         self.indices = np.arange(self.n_edges, dtype=np.int64)
         self.oneway_share = float(oneway.mean()) if oneway.size else 0.0
 
-        # 反向索引：节点 → 入边（边扩展图用）
+        # 反向索引：节点 -> 入边（边扩展图用）
         in_counts = np.bincount(self.edge_dst, minlength=self.n_nodes)
         self.in_indptr = np.zeros(self.n_nodes + 1, dtype=np.int64)
         np.cumsum(in_counts, out=self.in_indptr[1:])
@@ -155,7 +154,7 @@ class CSRGraph:
     ):
         """流式多源最短路：逐批产出 (起止下标, 该批的 (chunk, n_nodes) 距离矩阵)。
 
-        必须流式：2000 个设施 × 70 万节点全量存下来要 11 GB，会直接 OOM。
+        必须流式：2000 个设施 x 70 万节点全量存下来要 11 GB，会直接 OOM。
         """
         sources = np.asarray(sources, dtype=np.int64)
         if not HAS_SCIPY:
@@ -231,7 +230,7 @@ class CSRGraph:
     ) -> np.ndarray:
         """边扩展图上的 Dijkstra，支持转向惩罚与掉头惩罚。
 
-        状态为"有向边"，从边 e (u→v) 转到边 f (v→x) 时按方位角差判定转向：
+        状态为"有向边"，从边 e (u->v) 转到边 f (v->x) 时按方位角差判定转向：
           直行 0，左/右转 += turn_penalty_min，掉头 += 2 * turn_penalty_min。
         返回按节点聚合的最短时间。
         """
@@ -273,7 +272,6 @@ class CSRGraph:
         dist_node[src] = 0.0
         return dist_node
 
-
 # 吸附
 
 @dataclass
@@ -284,12 +282,11 @@ class SnapResult:
     failed_share: float
     mean_dist: float
 
-
 def snap_points(px: np.ndarray, py: np.ndarray, nodes: np.ndarray, max_dist_m: float = 300.0) -> SnapResult:
     """把点吸附到最近路网节点；超限记为失败，不静默取最近节点。
 
     用均匀网格分桶做空间索引：每个点只比对邻域 9 个桶，邻域内找不到再退回全量比对，
-    避免 O(点数 × 节点数) 的平方级开销（10 万单元 × 13 万节点时会从分钟级降到秒级）。
+    避免 O(点数 x 节点数) 的平方级开销（10 万单元 x 13 万节点时会从分钟级降到秒级）。
     """
     px = np.asarray(px, dtype=float)
     py = np.asarray(py, dtype=float)
@@ -301,7 +298,7 @@ def snap_points(px: np.ndarray, py: np.ndarray, nodes: np.ndarray, max_dist_m: f
                           failed_share=1.0, mean_dist=0.0)
 
     nx, ny = nodes[:, 0], nodes[:, 1]
-    # 桶边长取"吸附半径"（上限为研究区的 1/40），保证最近的节点一定落在 3×3 邻域内
+    # 桶边长取"吸附半径"（上限为研究区的 1/40），保证最近的节点一定落在 3x3 邻域内
     ext = max(float(nx.max() - nx.min()), float(ny.max() - ny.min()), 1.0)
     cell = max(25.0, min(float(max_dist_m), ext / 40.0))
 

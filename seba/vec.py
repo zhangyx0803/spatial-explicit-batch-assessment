@@ -5,7 +5,7 @@
 结构（geoms + attrs + kind + prj），这样下游 realdata 完全不用改。
 
 约定：
-  - 面要素：geoms[i] 是“环列表”[ndarray(n,2), ...]
+  - 面要素：geoms[i] 是环列表[ndarray(n,2), ...]
   - 线/点要素：geoms[i] 是 ndarray(n,2)（多段时取最长的一段，保证属性与几何一一对应）
 """
 
@@ -25,10 +25,8 @@ __all__ = ["read_vector", "read_table", "vector_exts", "table_exts"]
 vector_exts = (".shp", ".geojson", ".json", ".kml")
 table_exts = (".csv", ".txt", ".xlsx", ".xls")
 
-
 def _empty(path: str, kind: str = "polygon") -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=[], attrs={}, prj="", n=0)
-
 
 # GeoJSON
 
@@ -97,7 +95,6 @@ def _from_geojson(path: str) -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=geoms, attrs=cols,
                      prj="GEOGCS[\"WGS 84\"]", n=len(geoms))
 
-
 # KML
 
 def _kml_coords(text: str) -> np.ndarray:
@@ -110,7 +107,6 @@ def _kml_coords(text: str) -> np.ndarray:
             except ValueError:
                 continue
     return np.asarray(pts, dtype=float) if pts else np.zeros((0, 2))
-
 
 def _from_kml(path: str) -> Shapefile:
     tree = ET.parse(path)
@@ -178,7 +174,6 @@ def _from_kml(path: str) -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=geoms, attrs=cols, prj="GEOGCS[\"WGS 84\"]",
                      n=len(geoms))
 
-
 # FileGDB（需要 pyogrio + shapely，均为可选依赖）
 
 def gdb_layers(path: str) -> List[Tuple[str, str, int]]:
@@ -199,7 +194,6 @@ def gdb_layers(path: str) -> List[Tuple[str, str, int]]:
     except Exception:
         return []
     return out
-
 
 def _from_gdb(path: str, layer: Optional[str] = None) -> Shapefile:
     from pyogrio.raw import read as _read
@@ -256,7 +250,6 @@ def _from_gdb(path: str, layer: Optional[str] = None) -> Shapefile:
     return Shapefile(path=path, kind=kind, geoms=geoms, attrs=attrs,
                      prj="GEOGCS[\"WGS 84\"]", n=len(geoms))
 
-
 # 统一入口
 
 def read_vector(path: str, layer: Optional[str] = None) -> Shapefile:
@@ -270,7 +263,6 @@ def read_vector(path: str, layer: Optional[str] = None) -> Shapefile:
     if ext == ".gdb" or path.lower().endswith(".gdb"):
         return _from_gdb(path, layer)
     raise ValueError("不支持的矢量格式：%s" % ext)
-
 
 def read_table(path: str, sheet: Optional[str] = None) -> Tuple[List[str], List[List[str]]]:
     """读取表格：返回 (列名, 数据行)。csv/txt 与 xlsx/xls 都走这里。"""

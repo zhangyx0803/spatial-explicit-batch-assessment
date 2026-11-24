@@ -14,7 +14,6 @@ import numpy as np
 
 __all__ = ["MoranResult", "morans_i", "residual_map_png", "district_summary"]
 
-
 @dataclass
 class MoranResult:
     i: float
@@ -33,7 +32,6 @@ class MoranResult:
             return "残差存在显著负空间自相关：模型在相邻单元间反复锯齿，检查因子口径"
         return "残差无显著空间自相关：全局模型的空间假设可接受"
 
-
 def _knn_neighbors(x: np.ndarray, y: np.ndarray, k: int = 6) -> List[List[int]]:
     """k 近邻邻接。规则格网与不规则点位都适用。"""
     n = x.size
@@ -51,7 +49,6 @@ def _knn_neighbors(x: np.ndarray, y: np.ndarray, k: int = 6) -> List[List[int]]:
         for i in range(e - s):
             nb[s + i] = [int(j) for j in idx[i] if j != s + i]
     return nb
-
 
 def morans_i(
     values: np.ndarray,
@@ -94,7 +91,6 @@ def morans_i(
     p = (1.0 + float((sims >= obs).sum())) / (1.0 + n_perm)
     return MoranResult(i=obs, e_i=e_i, sd=sd, z=zscore, p=p, n_perm=n_perm)
 
-
 def district_summary(
     admin_code: np.ndarray,
     resid: np.ndarray,
@@ -118,9 +114,8 @@ def district_summary(
     rows.sort(key=lambda r: -abs(r[1]))
     return rows
 
-
 def _diverging_color(v: float, vmax: float) -> Tuple[int, int, int]:
-    """蓝—白—红双向色带：负残差（高估）蓝，正残差（低估）红。"""
+    """蓝-白-红双向色带：负残差（高估）蓝，正残差（低估）红。"""
     if vmax <= 0:
         return (245, 245, 245)
     t = max(-1.0, min(1.0, v / vmax))
@@ -138,7 +133,6 @@ def _diverging_color(v: float, vmax: float) -> Tuple[int, int, int]:
         int(247 + (196 - 247) * a),
     )
 
-
 def _load_cjk_font(size: int):
     """找一个带中文字形的系统字体；找不到就退回默认字体并用英文标注。"""
     import os
@@ -154,7 +148,6 @@ def _load_cjk_font(size: int):
             except Exception:
                 continue
     return None
-
 
 def residual_map_png(
     path: str,

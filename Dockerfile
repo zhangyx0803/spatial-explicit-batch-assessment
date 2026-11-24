@@ -17,4 +17,4 @@ ENV PORT=7860
 EXPOSE 7860
 
 # 用 shell 形式，确保能读到运行时的 $PORT
-CMD ["sh", "-c", "python run_web.py --no-open --bundle data/demo_xuhui.bundle --host 0.0.0.0 --port ${PORT:-7860}"]
+CMD ["sh", "-c", "python run_web.py --no-open --bundle data/xuhui.bundle --host 0.0.0.0 --port ${PORT:-7860}"]

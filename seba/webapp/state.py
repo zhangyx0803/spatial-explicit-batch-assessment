@@ -2,7 +2,7 @@
 """Web 版运行态：场景、因子引擎、模型拟合三层的缓存与重建。
 
 三个入口：
-    build_demo()      用内置演示区
+    build_scene()     用内置测试区
     import_data(spec) 用用户导入的 CSV
     update_factors()  改因子参数 / 启用状态后重算
 场景与因子只在数据变化时重算，改模型特征只重跑模型层。
@@ -22,7 +22,7 @@ import numpy as np
 from ..config import ProjectConfig, _validate_factor
 from ..diagnosis import district_summary, morans_i, residual_map_png
 from ..engine import FactorEngine
-from ..grid import build_demo_dataset
+from ..grid import build_test_dataset
 from ..importer import ImportError2, build_dataset
 from ..labels import FACTOR_CN, LAYER_TYPE_CN, TEMPLATES, catalog, factor_name, op_name
 from ..ratios import ratio_study
@@ -31,16 +31,14 @@ from ..stats import fit_and_evaluate
 
 __all__ = ["AppState"]
 
-# 演示场景专用的中间因子：不进特征池
+# 测试场景专用的中间因子：不进特征池
 _INTERMEDIATE = ("net_cbd_dist", "acc_cbd_time_turn")
-
 
 def _num(a, nd: int = 4):
     out = []
     for v in np.asarray(a, dtype=float).ravel():
         out.append(None if not math.isfinite(float(v)) else round(float(v), nd))
     return out
-
 
 class _MoranView:
     def __init__(self, d: Dict):
@@ -50,7 +48,6 @@ class _MoranView:
 
     def verdict(self) -> str:
         return self._v
-
 
 _USE_HINT = (
     ("商业/工业", ("商业/工业", "商业工业", "工业地块")),
@@ -65,9 +62,8 @@ _USE_HINT = (
     ("宗教", ("寺", "庙", "教堂", "道观")),
 )
 
-
 def _use_detail(name: str, use_type: str) -> str:
-    """把“非住宅”细化为学校 / 公园 / 商业 / 办公 等，便于阅读。"""
+    """把非住宅细化为学校 / 公园 / 商业 / 办公 等，便于阅读。"""
     if str(use_type) == "住宅":
         return "住宅"
     n = str(name or "")
@@ -76,15 +72,14 @@ def _use_detail(name: str, use_type: str) -> str:
             return label
     return "非住宅"
 
-
 class AppState:
-    def __init__(self, cfg_path: str, dataset=None, notes=None, source: str = "demo",
+    def __init__(self, cfg_path: str, dataset=None, notes=None, source: str = "builtin",
                  prebuilt: bool = False, districts_dir: str = None):
         self.cfg_path = cfg_path
         with open(cfg_path, "r", encoding="utf-8") as fh:
             self.cfg = ProjectConfig.from_yaml(fh.read())
         self._cfg_template = copy.deepcopy(self.cfg)
-        self._demo_spec = copy.deepcopy(self.cfg.raw)
+        self._default_spec = copy.deepcopy(self.cfg.raw)
         self.source = source
         self.prebuilt = bool(prebuilt)
         self.import_notes: List[str] = list(notes or [])
@@ -105,7 +100,7 @@ class AppState:
             self.load_seconds = time.perf_counter() - t0
             return
 
-        scene = build_demo_dataset(
+        scene = build_test_dataset(
             seed=int((self.cfg.raw["project"].get("area_of_interest") or {}).get("seed", 20261117)),
             nx=int((self.cfg.raw["project"].get("area_of_interest") or {}).get("nx", 40)),
             ny=int((self.cfg.raw["project"].get("area_of_interest") or {}).get("ny", 40)),
@@ -363,7 +358,7 @@ class AppState:
 
         道路/水体/中心地原本就在 ds.basemap 里；地铁、商业、公交、学校等
         点图层只存在 ds.layers 中，前端没有坐标就画不出来，所以在这里统一
-        打包成 {id, name, xy}，供“数据图层”勾选叠加。
+        打包成 {id, name, xy}，供数据图层勾选叠加。
         """
         bm = dict(getattr(self.ds, "basemap", {}) or {})
         pts = []
@@ -473,7 +468,7 @@ class AppState:
         from ..decompose import BUYER_HINT, decompose as _dec
 
         # 非住宅单元（学校、公园、商业、办公等）没有住宅价格，不能做价格拆解。
-        # 否则模型会拿周边住宅样本外推一个“价格”，看起来像真的。
+        # 否则模型会拿周边住宅样本外推一个价格，看起来像真的。
         _ut = getattr(self.ds.units, "use_type", None)
         if _ut is not None and str(_ut[int(idx)]) != "住宅":
             _nm = ""
@@ -570,7 +565,7 @@ class AppState:
             ],
         }
 
-    # 数据导入 / 恢复演示
+    # 数据导入 / 恢复默认
     # 数据接入向导
     def _upload_dir(self) -> str:
         here = os.path.dirname(os.path.abspath(__file__))
@@ -806,12 +801,12 @@ class AppState:
         self._activate(ds)
         return {"notes": notes, "n_units": ds.n_units, "n_obs": ds.n_obs()}
 
-    def reset_demo(self) -> None:
-        self.cfg = ProjectConfig.from_yaml(_dump_cfg(self._demo_spec))
+    def reset_scene(self) -> None:
+        self.cfg = ProjectConfig.from_yaml(_dump_cfg(self._default_spec))
         self._cfg_template = copy.deepcopy(self.cfg)
-        self.source = "demo"
+        self.source = "builtin"
         self.import_notes = []
-        scene = build_demo_dataset()
+        scene = build_test_dataset()
         self._activate(scene.dataset)
 
     def preview(self, b64: str, kind: str) -> Dict:
@@ -858,7 +853,7 @@ class AppState:
         for slot in tpl["inputs"]:
             val = (mapping or {}).get(slot)
             if not val:
-                raise ValueError("请为“%s”选择一个输入" % slot)
+                raise ValueError("请为%s选择一个输入" % slot)
             inputs[slot] = val
         p = dict(tpl["params"])
         p.update(params or {})
@@ -911,7 +906,7 @@ class AppState:
             # 内置数据包不含运行时报告，这里输出因子清单与算子对应关系，
             # 耗时/缓存留空，避免出现一张只有表头的空表
             run_df = pd.DataFrame(
-                [[s["code"], s["op_name"], "内置数据包（无运行记录）", "—",
+                [[s["code"], s["op_name"], "内置数据包（无运行记录）", "-",
                   s.get("note") or ""] for s in self.factor_stats()],
                 columns=["因子", "算子", "缓存", "耗时(s)", "输出"])
         diag_df = pd.DataFrame([
@@ -973,21 +968,21 @@ class AppState:
         })
         return [xlsx, docx_path, png]
 
-
     def _data_nature_text(self) -> str:
-        """导出报告里“数据性质”一栏的文字，按实际成交来源判定。"""
+        """导出报告里数据性质一栏的文字，按实际成交来源判定。"""
         src = set(str(x) for x in self.ds.obs.source)
-        if any('合成' in x for x in src):
-            return '合成演示数据，精度指标不代表实盘能力'
+        if any('估算' in x for x in src):
+            return '估算数据，精度指标不代表实盘能力'
         return '小区级真实挂牌价（按 800 米聚合到评估单元），精度指标反映真实价格的可解释程度'
 
     def _data_version_text(self) -> str:
-        """导出报告里“数据版本”一栏的文字。"""
+        """导出报告里数据版本一栏的文字。"""
         if self.source == 'user':
             return '用户导入'
         src = set(str(x) for x in self.ds.obs.source)
-        return '内置数据包（合成价）' if any('合成' in x for x in src)             else '内置数据包（真实小区挂牌价 2024）'
-
+        if any('估算' in x for x in src):
+            return '内置数据包（估算价）'
+        return '内置数据包（真实小区挂牌价 2024）'
 
 def _extent_with_basemap(u, bm) -> list:
     """地图视野：本区单元范围 + 1 km 外扩。
@@ -998,7 +993,6 @@ def _extent_with_basemap(u, bm) -> list:
     m = 1000.0
     return [float(u.x.min()) - m, float(u.y.min()) - m,
             float(u.x.max()) + m, float(u.y.max()) + m]
-
 
 def _layer_cn(lid: str, kind: str) -> str:
     table = {
@@ -1018,9 +1012,8 @@ def _layer_cn(lid: str, kind: str) -> str:
     }
     return table.get(lid, lid)
 
-
 def _dump_cfg(raw: Dict) -> str:
-    """把配置字典还原成 YAML 文本（仅用于重置演示数据）。"""
+    """把配置字典还原成 YAML 文本（仅用于重置默认数据）。"""
     import json
 
     # 配置本来就是从 YAML 解析来的 dict；这里用紧凑的自定义序列化避免引入依赖

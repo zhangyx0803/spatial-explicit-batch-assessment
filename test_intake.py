@@ -19,7 +19,7 @@ for p in (P_VILLAGE, P_ROADS, P_LANDUSE):
     print("   几何=%s  要素=%d  CRS=%s" % (fi.geom, fi.n_features, fi.crs))
     print("   字段(%d): %s" % (len(fi.columns), fi.columns[:9]))
     r, c, why = _guess_role(fi)
-    print("   → 识别为 %s（置信 %.0f%%）：%s" % (r, c * 100, why))
+    print("   -> 识别为 %s（置信 %.0f%%）：%s" % (r, c * 100, why))
     fm, fc = _assign_fields(fi, r)
     print("   字段映射: %s" % {k: (v, round(fc[k], 2)) for k, v in fm.items()})
 
@@ -64,7 +64,7 @@ for label, geom, cols, sample in cases:
             "成交表": "obs", "POI": "poi"}[label.split("-")[0]]
     hit = r == want
     ok += hit
-    print("\n%s %s" % ("✅" if hit else "❌", label))
+    print("\n%s %s" % ("" if hit else "", label))
     print("   识别为 %s（%.0f%%）" % (r, c * 100))
     print("   映射: %s" % {k: v for k, v in fm.items()})
 

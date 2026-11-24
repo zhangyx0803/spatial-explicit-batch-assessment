@@ -2,9 +2,9 @@
 """纯 Python 读取 Shapefile（点 / 线 / 面 + DBF 属性），不依赖 geopandas。
 
 只实现本工程需要的部分：
-  · ShapeType 1  Point / 5 Polygon / 3 Polyline / 8 MultiPoint
-  · DBF 属性表（UTF-8 与 GBK 自动识别）
-  · 读取 .prj 判断地理坐标还是投影坐标
+  * ShapeType 1  Point / 5 Polygon / 3 Polyline / 8 MultiPoint
+  * DBF 属性表（UTF-8 与 GBK 自动识别）
+  * 读取 .prj 判断地理坐标还是投影坐标
 
 坐标系不做重投影，只提供本地等距圆柱近似（适合市域尺度）。
 """
@@ -21,7 +21,6 @@ import numpy as np
 __all__ = ["Shapefile", "read_shapefile", "dbf_field_names"]
 
 _TYPE = {1: "point", 3: "polyline", 5: "polygon", 8: "multipoint", 11: "point", 13: "polyline", 15: "polygon"}
-
 
 @dataclass
 class Shapefile:
@@ -43,9 +42,8 @@ class Shapefile:
         return self.attrs[name]
 
     def to_lonlat(self) -> None:
-        """若为投影坐标则原样返回；本工具只做地理→平面的换算，不反向。"""
+        """若为投影坐标则原样返回；本工具只做地理->平面的换算，不反向。"""
         return None
-
 
 def _decode(raw: bytes) -> str:
     for enc in ("utf-8", "gbk", "gb18030"):
@@ -54,7 +52,6 @@ def _decode(raw: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return raw.decode("latin-1", errors="replace")
-
 
 def dbf_field_names(path: str) -> List[str]:
     out = []
@@ -66,7 +63,6 @@ def dbf_field_names(path: str) -> List[str]:
                 break
             out.append(_decode(fd[0:11]).split("\x00")[0].strip())
     return out
-
 
 def _read_dbf(path: str) -> Dict[str, List[str]]:
     with open(path, "rb") as f:
@@ -90,7 +86,6 @@ def _read_dbf(path: str) -> Dict[str, List[str]]:
                 out[n].append(_decode(rec[o:o + ln]).strip())
     return out
 
-
 def _prj(path: str) -> str:
     p = os.path.splitext(path)[0] + ".prj"
     if not os.path.exists(p):
@@ -100,7 +95,6 @@ def _prj(path: str) -> str:
             return fh.read()
     except Exception:
         return ""
-
 
 def read_shapefile(path: str, limit: Optional[int] = None) -> Shapefile:
     if not os.path.exists(path):
@@ -157,13 +151,11 @@ def read_shapefile(path: str, limit: Optional[int] = None) -> Shapefile:
             attrs[k] = attrs[k][:n]
     return Shapefile(path=path, kind=kind, geoms=geoms, attrs=attrs, prj=_prj(path), n=n)
 
-
 # 几何工具
 
 def ring_area(ring: np.ndarray) -> float:
     x, y = ring[:, 0], ring[:, 1]
     return 0.5 * float(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
-
 
 def polygon_area(rings: List[np.ndarray]) -> float:
     """外环面积取正，内环（洞）按带符号面积扣除。"""
@@ -173,7 +165,6 @@ def polygon_area(rings: List[np.ndarray]) -> float:
     for r in rings[1:]:
         a -= abs(ring_area(r))
     return max(a, 0.0)
-
 
 def polygon_centroid(rings: List[np.ndarray]) -> Tuple[float, float]:
     """按面积加权的质心；退化时退回顶点均值。"""
@@ -189,14 +180,12 @@ def polygon_centroid(rings: List[np.ndarray]) -> Tuple[float, float]:
     cy = ((y + np.roll(y, -1)) * cross).sum() / (6.0 * a)
     return (float(cx), float(cy))
 
-
 def to_local_xy(lon: np.ndarray, lat: np.ndarray, lat0: Optional[float] = None):
-    """经纬度 → 局部平面坐标（米）。市域尺度足够，误差 < 0.1%。"""
+    """经纬度 -> 局部平面坐标（米）。市域尺度足够，误差 < 0.1%。"""
     lat0 = float(np.mean(lat)) if lat0 is None else lat0
     kx = 111320.0 * np.cos(np.radians(lat0))
     ky = 110540.0
     return (lon - np.min(lon)) * kx, (lat - np.min(lat)) * ky
-
 
 def points_in_rings(px: np.ndarray, py: np.ndarray, rings: List[np.ndarray]) -> np.ndarray:
     """射线法判断点是否落在多边形内（含洞）。"""

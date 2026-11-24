@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """双击 exe 的入口。
 
-设计原则：双击之后不管成功还是失败，用户都必须能看到“发生了什么”——
+设计原则：双击之后不管成功还是失败，用户都必须能看到发生了什么-
 失败时窗口不能一闪而过，成功时要明确告诉地址。
 所有输出同时写入日志文件，方便远程排查。
 """
@@ -16,7 +16,6 @@ import traceback
 import webbrowser
 
 APP = "空间显式批量评估工作台系统 V1.0"
-
 
 def _fix_console() -> None:
     """Windows 控制台默认 GBK，中文会显示成乱码，这里强制切到 UTF-8。"""
@@ -37,13 +36,11 @@ def _fix_console() -> None:
 
 _T0 = time.time()
 
-
 def _base() -> str:
     """打包后资源在 sys._MEIPASS，开发时在脚本目录。"""
     if getattr(sys, "frozen", False) and getattr(sys, "_MEIPASS", None):
         return sys._MEIPASS
     return os.path.dirname(os.path.abspath(__file__))
-
 
 def _exe_dir() -> str:
     """exe 所在目录（日志写这里，方便用户直接找到发给我）。"""
@@ -51,9 +48,7 @@ def _exe_dir() -> str:
         return os.path.dirname(os.path.abspath(sys.executable))
     return os.path.dirname(os.path.abspath(__file__))
 
-
 _LOG_PATH = ""
-
 
 def _init_log() -> None:
     _fix_console()
@@ -71,7 +66,6 @@ def _init_log() -> None:
         except Exception:
             continue
 
-
 def log(msg: str) -> None:
     print(msg, flush=True)
     if _LOG_PATH:
@@ -80,7 +74,6 @@ def log(msg: str) -> None:
                 fh.write(msg + "\n")
         except Exception:
             pass
-
 
 def _free_port(start: int = 8765, tries: int = 40) -> int:
     for p in range(start, start + tries):
@@ -92,7 +85,6 @@ def _free_port(start: int = 8765, tries: int = 40) -> int:
             except OSError:
                 continue
     return 0
-
 
 def _holding(port: int) -> int:
     """如果端口已被占用，判断是不是本程序已经在跑（是则直接开浏览器）。"""
@@ -110,7 +102,6 @@ def _holding(port: int) -> int:
     except Exception:
         return 2
 
-
 def selftest() -> int:
     """诊断模式：把环境信息打出来，用户截图发回来即可定位问题。"""
     log("=" * 60)
@@ -121,7 +112,7 @@ def selftest() -> int:
     log("日志文件   : %s" % (_LOG_PATH or "（无法写入）"))
     log("Python     : %s" % sys.version.replace("\n", " "))
     log("临时目录   : %s" % os.environ.get("TEMP", "?"))
-    bundle = os.path.join(_base(), "data", "demo_xuhui.bundle")
+    bundle = os.path.join(_base(), "data", "districts/徐汇区.bundle")
     log("数据包     : %s  %s" % (bundle, "存在" if os.path.exists(bundle) else "缺失！"))
     if os.path.exists(bundle):
         log("            %.1f MB" % (os.path.getsize(bundle) / 1048576))
@@ -132,7 +123,7 @@ def selftest() -> int:
     for port in (8765, 8766, 8767):
         h = _holding(port)
         if h == 1:
-            log("端口 %d   : 已有本程序的实例在运行 → http://127.0.0.1:%d/" % (port, port))
+            log("端口 %d   : 已有本程序的实例在运行 -> http://127.0.0.1:%d/" % (port, port))
             break
         if h == 2:
             log("端口 %d   : 被其他程序占用" % port)
@@ -146,7 +137,6 @@ def selftest() -> int:
     log("以上信息截图发回即可。")
     return 0
 
-
 def main() -> int:
     _init_log()
 
@@ -157,7 +147,7 @@ def main() -> int:
             _pause()
 
     base = _base()
-    bundle = os.path.join(base, "data", "demo_xuhui.bundle")
+    bundle = os.path.join(base, "data", "districts/徐汇区.bundle")
 
     log("")
     log("  " + "=" * 56)
@@ -193,11 +183,11 @@ def main() -> int:
         return 3
 
     url = "http://127.0.0.1:%d/" % port
-    log("  正在启动服务（首次约 5-10 秒）……")
+    log("  正在启动服务（首次约 5-10 秒）......")
     log("")
-    log("  ★ 访问地址： %s" % url)
-    log("  ★ 浏览器会自动打开；若没打开，手动复制上面地址")
-    log("  ★ 关闭这个黑窗口就停止服务")
+    log("   访问地址： %s" % url)
+    log("   浏览器会自动打开；若没打开，手动复制上面地址")
+    log("   关闭这个黑窗口就停止服务")
     log("  " + "-" * 56)
     log("")
 
@@ -238,13 +228,11 @@ def main() -> int:
         _pause()
         return 1
 
-
 def _pause() -> None:
     try:
-        input("\n按回车键退出…")
+        input("\n按回车键退出...")
     except Exception:
         time.sleep(30)
-
 
 if __name__ == "__main__":
     try:

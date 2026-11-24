@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""抓取并解析各区教育局“公办小学招生划片范围”页，输出 config/catchment/<区>.csv。
+"""抓取并解析各区教育局公办小学招生划片范围页，输出 config/catchment/<区>.csv。
 
 只访问政府公开页面（shanghai.gov.cn），不涉及商业网站。
 """
@@ -28,7 +28,6 @@ PAGES = {
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; SEBA-research/1.0; academic use)",
 }
-
 
 class TableParser(HTMLParser):
     """把页面里的所有表格抽成 [[cell, ...], ...]。"""
@@ -66,7 +65,6 @@ class TableParser(HTMLParser):
         if self._cell is not None:
             self._cell.append(data)
 
-
 def fetch(url: str) -> str:
     req = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -78,9 +76,8 @@ def fetch(url: str) -> str:
             continue
     return raw.decode("utf-8", "ignore")
 
-
 def pick_columns(rows):
-    """在表头行里找“学校名”“对口范围”两列的下标。兼容多种写法。"""
+    """在表头行里找学校名对口范围两列的下标。兼容多种写法。"""
     NAME_KEYS = ("学校名称", "校名", "学校", "校 名", "单位")
     SCOPE_KEYS = ("对口", "划片", "地段", "居委")
     for i, row in enumerate(rows[:8]):
@@ -97,7 +94,6 @@ def pick_columns(rows):
             return i, name_i, scope_i, cnt_i
     return None
 
-
 def parse_district(name: str, url: str):
     page = fetch(url)
     p = TableParser()
@@ -110,7 +106,7 @@ def parse_district(name: str, url: str):
             continue
         hi, ni, ji, ci = info
         body = [r for r in rows[hi + 1:] if len(r) > max(ni, ji) and r[ni]]
-        # 只保留看起来像学校的行，并按“对口文本总量”打分，避免选中汇总表
+        # 只保留看起来像学校的行，并按对口文本总量打分，避免选中汇总表
         body = [r for r in body if re.search(r"[学幼]", r[ni])]
         score = sum(len(r[ji]) for r in body)
         if body and score > best_score:
@@ -130,7 +126,6 @@ def parse_district(name: str, url: str):
         out.append({"学校名称": school, "招生班级数": cnt, "是否集团化": "",
                     "对口居委": scope})
     return out, None
-
 
 def main() -> int:
     os.makedirs(OUTDIR, exist_ok=True)
@@ -154,9 +149,8 @@ def main() -> int:
             w.writeheader()
             w.writerows(rows)
         tot = sum(len(r["对口居委"]) for r in rows)
-        print("%-6s %3d 所学校  对口文本 %5d 字  → %s" % (d, len(rows), tot, os.path.basename(path)))
+        print("%-6s %3d 所学校  对口文本 %5d 字  -> %s" % (d, len(rows), tot, os.path.basename(path)))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

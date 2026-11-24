@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成导入用的样例 CSV，放到“样例数据”目录。"""
+"""生成导入用的样例 CSV，放到样例数据目录。"""
 import os
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ rng = np.random.default_rng(7)
 OUT = "样例数据"
 os.makedirs(OUT, exist_ok=True)
 
-# 研究区：上海市区一块 8km × 8km，格网 250m
+# 研究区：上海市区一块 8km x 8km，格网 250m
 N = 32
 CELL = 250.0
 LON0, LAT0 = 121.4000, 31.2000

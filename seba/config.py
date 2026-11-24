@@ -28,10 +28,8 @@ __all__ = [
     "OPS",
 ]
 
-
 class ConfigError(ValueError):
     """配置结构或参数非法。"""
-
 
 # 1. YAML 子集解析
 
@@ -54,7 +52,6 @@ def _strip_comment(line: str) -> str:
             out.append(ch)
     return "".join(out).rstrip()
 
-
 def _cast(tok: str) -> Any:
     t = tok.strip()
     if not t:
@@ -73,7 +70,6 @@ def _cast(tok: str) -> Any:
     if re.fullmatch(r"-?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?", t) and any(c in t for c in ".eE"):
         return float(t)
     return t
-
 
 def _split_top(s: str, sep: str = ",") -> List[str]:
     """按顶层分隔符切分，忽略括号与引号内部的逗号。"""
@@ -103,7 +99,6 @@ def _split_top(s: str, sep: str = ",") -> List[str]:
     parts.append("".join(cur))
     return parts
 
-
 def _scalar(s: str) -> Any:
     s = s.strip()
     if s.startswith("[") and s.endswith("]"):
@@ -122,7 +117,6 @@ def _scalar(s: str) -> Any:
         return d
     return _cast(s)
 
-
 def _prepare(text: str) -> List[tuple]:
     rows: List[tuple] = []
     for raw in text.splitlines():
@@ -135,9 +129,7 @@ def _prepare(text: str) -> List[tuple]:
         rows.append((indent, line.strip()))
     return rows
 
-
 _KEY_RE = re.compile(r"^[A-Za-z_\u4e00-\u9fff][\w\-. ]*:(\s|$)")
-
 
 def _parse_node(rows: List[tuple], i: int, indent: int) -> tuple:
     ind, txt = rows[i]
@@ -191,7 +183,6 @@ def _parse_node(rows: List[tuple], i: int, indent: int) -> tuple:
             mp[key] = None
     return mp, i
 
-
 def load_yaml(text: str) -> Any:
     """解析 YAML 子集文本，返回 dict / list。"""
     rows = _prepare(text)
@@ -201,7 +192,6 @@ def load_yaml(text: str) -> Any:
     if i != len(rows):
         raise ConfigError("第 %d 行附近缩进不一致" % (i + 1))
     return val
-
 
 # 2. 算子注册表：每个算子的必填输入、参数与单位要求
 
@@ -214,7 +204,6 @@ class OpSpec:
     optional_params: tuple = ()
     outputs: tuple = ()
     note: str = ""
-
 
 OPS: Dict[str, OpSpec] = {
     "network_shortest_path": OpSpec(
@@ -241,7 +230,7 @@ OPS: Dict[str, OpSpec] = {
         required_params=("impedance",),
         optional_params=("mass",),
         outputs=("index",),
-        note="A_i = Σ_j O_j · f(d_ij)",
+        note="A_i = Σ_j O_j * f(d_ij)",
     ),
     "two_step_floating_catchment": OpSpec(
         "two_step_floating_catchment",
@@ -305,7 +294,6 @@ OPS: Dict[str, OpSpec] = {
 VALID_MODES = ("drive", "walk", "bike")
 IMPERANCE_TYPES = ("exponential", "power", "gaussian")
 
-
 # 3. 配置对象
 
 @dataclass
@@ -328,11 +316,9 @@ class FactorSpec:
         )
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
-
 def _require(cond: bool, msg: str) -> None:
     if not cond:
         raise ConfigError(msg)
-
 
 def _check_snap(params: Dict[str, Any], where: str) -> None:
     snap = params.get("snap")
@@ -345,7 +331,6 @@ def _check_snap(params: Dict[str, Any], where: str) -> None:
     )
     md = snap.get("max_dist_m", 300)
     _require(isinstance(md, (int, float)) and md > 0, "%s: snap.max_dist_m 必须为正数" % where)
-
 
 def _validate_factor(f: FactorSpec) -> None:
     where = "因子 %s" % f.code
@@ -389,7 +374,6 @@ def _validate_factor(f: FactorSpec) -> None:
 
     if not f.outputs:
         f.outputs = list(spec.outputs) or ["value"]
-
 
 @dataclass
 class ProjectConfig:
@@ -497,7 +481,7 @@ class ProjectConfig:
         def visit(node: str, stack: List[str]) -> None:
             st = state.get(node, 0)
             if st == 1:
-                cyc = " → ".join(stack[stack.index(node):] + [node])
+                cyc = " -> ".join(stack[stack.index(node):] + [node])
                 raise ConfigError("因子依赖存在环：%s" % cyc)
             if st == 2:
                 return

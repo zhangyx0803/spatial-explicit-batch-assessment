@@ -2,9 +2,9 @@
 """CSV 导入：列映射、坐标处理、构建内部数据契约。
 
 不依赖 geopandas / shapely：
-  · 坐标：支持投影坐标（x / y）或经纬度（自动换算为研究区局部平面坐标）
-  · 几何：评估单元按"方格"处理（边长由用户指定），面要素用外接矩形
-  · 路网：边清单（起止点坐标 + 等级 + 单向），节点按坐标去重
+  * 坐标：支持投影坐标（x / y）或经纬度（自动换算为研究区局部平面坐标）
+  * 几何：评估单元按"方格"处理（边长由用户指定），面要素用外接矩形
+  * 路网：边清单（起止点坐标 + 等级 + 单向），节点按坐标去重
 """
 
 from __future__ import annotations
@@ -22,10 +22,8 @@ from .datamodel import Dataset, Grid, LayerData, ObsTable, UnitTable
 
 __all__ = ["ImportError2", "read_bytes", "parse_table", "guess_map", "build_dataset"]
 
-
 class ImportError2(ValueError):
     """导入过程中的可读错误。"""
-
 
 # 读文件
 
@@ -38,7 +36,6 @@ def read_bytes(b64: str) -> str:
             continue
     return raw.decode("latin-1", errors="replace")
 
-
 def parse_table(text: str) -> pd.DataFrame:
     head = text.splitlines()[0] if text.strip() else ""
     sep = "\t" if head.count("\t") > head.count(",") else ("," if "," in head else r"\s+")
@@ -47,7 +44,6 @@ def parse_table(text: str) -> pd.DataFrame:
     if not len(df.columns):
         raise ImportError2("文件里没有识别到表头，请确认是 CSV 或 TSV")
     return df
-
 
 # 列映射猜测
 
@@ -72,7 +68,6 @@ _KEYS = {
     "oneway": ["单向", "oneway"],
 }
 
-
 def _find(cols: List[str], keys: List[str]) -> Optional[str]:
     low = {c: c.lower().replace(" ", "") for c in cols}
     for k in keys:
@@ -86,7 +81,6 @@ def _find(cols: List[str], keys: List[str]) -> Optional[str]:
             if kl in low[c]:
                 return c
     return None
-
 
 def guess_map(cols: List[str], kind: str) -> Dict[str, Optional[str]]:
     out: Dict[str, Optional[str]] = {}
@@ -119,7 +113,6 @@ def guess_map(cols: List[str], kind: str) -> Dict[str, Optional[str]]:
         out["oneway"] = _find(cols, _KEYS["oneway"])
     return out
 
-
 # 坐标
 
 def _to_xy(df: pd.DataFrame, m: Dict, what: str) -> Tuple[np.ndarray, np.ndarray, str]:
@@ -137,9 +130,9 @@ def _to_xy(df: pd.DataFrame, m: Dict, what: str) -> Tuple[np.ndarray, np.ndarray
         lat0 = float(np.nanmean(lat))
         x = lon * 111320.0 * math.cos(math.radians(lat0))
         y = lat * 110540.0
-        note = "经纬度 → 已换算为研究区局部平面坐标（中心纬度 %.3f°）" % lat0
+        note = "经纬度 -> 已换算为研究区局部平面坐标（中心纬度 %.3f°）" % lat0
     else:
-        raise ImportError2("%s 缺少坐标列：请指定“经度/纬度”或“X/Y”两列" % what)
+        raise ImportError2("%s 缺少坐标列：请指定经度/纬度或X/Y两列" % what)
 
     ok = np.isfinite(x) & np.isfinite(y)
     if ok.sum() < 3:
@@ -149,7 +142,6 @@ def _to_xy(df: pd.DataFrame, m: Dict, what: str) -> Tuple[np.ndarray, np.ndarray
     x = x[ok] - np.nanmin(x[ok])
     y = y[ok] - np.nanmin(y[ok])
     return x, y, note
-
 
 def _text(item: Dict) -> str:
     """导入项既可能直接带文本，也可能带 base64 原文。"""
@@ -161,11 +153,10 @@ def _text(item: Dict) -> str:
         return read_bytes(b64)
     raise ImportError2("缺少文件内容")
 
-
 # 构建
 
 def _auto_network(x0: float, y0: float, x1: float, y1: float, cell: float) -> np.ndarray:
-    """没有提供路网时，按研究区范围生成规则格网示意路网。"""
+    """没有提供路网时，按研究区范围生成规则格网近似路网。"""
     nx = max(2, int(math.ceil((x1 - x0) / cell)) + 1)
     ny = max(2, int(math.ceil((y1 - y0) / cell)) + 1)
     idx = lambda i, j: j * nx + i  # noqa: E731
@@ -180,7 +171,6 @@ def _auto_network(x0: float, y0: float, x1: float, y1: float, cell: float) -> np
             edges.append((idx(i, j), idx(i, j + 1), cell, cls, 0))
     return np.array(edges, dtype=float), nx * ny, (x0, y0, x1, y1, nx, ny)
 
-
 def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Dataset, List[str]]:
     """按导入规格构建 Dataset。返回 (数据集, 提示信息列表)。"""
     notes: List[str] = []
@@ -191,7 +181,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     # 评估单元
     u = spec.get("units") or {}
     if not (u.get("text") or u.get("b64")):
-        raise ImportError2("请先导入“评估单元”文件")
+        raise ImportError2("请先导入评估单元文件")
     udf = parse_table(_text(u))
     umap = u.get("map") or guess_map(list(udf.columns), "units")
     ux, uy, note = _to_xy(udf, umap, "评估单元")
@@ -203,7 +193,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         unit_id = udf[id_col].astype(str).to_numpy()
     else:
         unit_id = np.array(["U%05d" % (i + 1) for i in range(n)])
-        notes.append("评估单元：未指定编号列，已按行号生成 U00001…")
+        notes.append("评估单元：未指定编号列，已按行号生成 U00001...")
 
     adm_col = umap.get("admin")
     admin = udf[adm_col].astype(str).to_numpy() if adm_col and adm_col in udf.columns \
@@ -227,7 +217,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         admin_code=admin,
         use_type=np.array(["未分类"] * n),
         population=pop,
-        asof_date=str(spec.get("asof_date") or "—"),
+        asof_date=str(spec.get("asof_date") or "-"),
     )
 
     # 单元属性（供"属性直读"类因子使用）
@@ -245,12 +235,12 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     # 成交
     o = spec.get("obs") or {}
     if not (o.get("text") or o.get("b64")):
-        raise ImportError2("请导入“成交记录”文件")
+        raise ImportError2("请导入成交记录文件")
     odf = parse_table(_text(o))
     omap = o.get("map") or guess_map(list(odf.columns), "obs")
     idc = omap.get("unit_id")
     if not idc or idc not in odf.columns:
-        raise ImportError2("成交记录缺少“单元编号”列，无法与评估单元对应")
+        raise ImportError2("成交记录缺少单元编号列，无法与评估单元对应")
     idx_map = {uid: i for i, uid in enumerate(unit_id)}
     keep, rows = [], []
     for k, rid in enumerate(odf[idc].astype(str).to_numpy()):
@@ -265,18 +255,18 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
     up_col, p_col = omap.get("unit_price"), omap.get("price")
     if up_col and up_col in odf.columns:
         price_pm2 = pd.to_numeric(odf[up_col], errors="coerce").to_numpy(dtype=float)
-        notes.append("成交：直接使用“成交单价”列")
+        notes.append("成交：直接使用成交单价列")
     elif p_col and p_col in odf.columns:
         total = pd.to_numeric(odf[p_col], errors="coerce").to_numpy(dtype=float)
         avg_area = float(spec.get("avg_area_m2") or 90.0)
         price_pm2 = total / max(avg_area, 1.0)
-        notes.append("成交：由“成交总价”除以套均面积 %.0f ㎡ 换算单价" % avg_area)
+        notes.append("成交：由成交总价除以套均面积 %.0f ㎡ 换算单价" % avg_area)
     else:
-        raise ImportError2("成交记录需要“成交单价”或“成交总价”列")
+        raise ImportError2("成交记录需要成交单价或成交总价列")
 
     dcol = omap.get("date")
     dates = odf[dcol].astype(str).to_numpy() if dcol and dcol in odf.columns \
-        else np.array(["—"] * len(odf))
+        else np.array(["-"] * len(odf))
 
     ok = np.isfinite(price_pm2) & (price_pm2 > 0)
     obs = ObsTable(
@@ -289,7 +279,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         weight=np.ones(int(ok.sum()), dtype=float),
     )
     if ok.sum() < 30:
-        notes.append("⚠ 有效成交只有 %d 条，回归结果不稳定，建议补到 100 条以上" % ok.sum())
+        notes.append(" 有效成交只有 %d 条，回归结果不稳定，建议补到 100 条以上" % ok.sum())
 
     # 路网
     nw = spec.get("network") or {}
@@ -346,7 +336,7 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         if len(edges) < 10:
             raise ImportError2("路网有效边过少（%d 条），请检查起止点坐标列" % len(edges))
         net = LayerData(
-            layer_id="road_net", layer_type="network", crs="用户导入", asof_date=str(spec.get("asof_date") or "—"),
+            layer_id="road_net", layer_type="network", crs="用户导入", asof_date=str(spec.get("asof_date") or "-"),
             version="u1", fields=["length", "speed_class", "oneway"],
             nodes=np.array(nxy, dtype=float), edges=np.array(edges, dtype=float),
         )
@@ -356,12 +346,12 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
             x0, y0, x0 + grid.nx * cell, y0 + grid.ny * cell, cell
         )
         net = LayerData(
-            layer_id="road_net", layer_type="network", crs="自动生成", asof_date="—", version="auto1",
+            layer_id="road_net", layer_type="network", crs="自动生成", asof_date="-", version="auto1",
             fields=["length", "speed_class", "oneway"],
             nodes=np.array([((k % gnx) * cell, (k // gnx) * cell) for k in range(nn)], dtype=float),
             edges=edges,
         )
-        notes.append("⚠ 未导入路网，已按格网自动生成示意路网；路网类因子仅作演示，请勿用于正式评估")
+        notes.append(" 未导入路网，已按格网自动生成近似路网；路网类因子仅用于调试，请勿用于正式评估")
 
     layers: Dict[str, LayerData] = {"road_net": net}
 
@@ -375,19 +365,19 @@ def build_dataset(spec: Dict, project_name: str = "我的工程") -> Tuple[Datas
         lid = ly.get("id") or ("layer_%d" % (i + 1))
         name = ly.get("name") or lmap.get("name") or lid
         if kind == "polygon":
-            raise ImportError2("面图层暂只支持内置演示数据，请先用点图层导入（如公园中心点）")
-        lx, lyy, lnote = _to_xy(ldf, lmap, "图层“%s”" % name)
+            raise ImportError2("面图层暂只支持内置数据，请先用点图层导入（如公园中心点）")
+        lx, lyy, lnote = _to_xy(ldf, lmap, "图层%s" % name)
         attrs = {}
         if lmap.get("weight") and lmap["weight"] in ldf.columns:
             w = pd.to_numeric(ldf[lmap["weight"]], errors="coerce")
             attrs["weight"] = w.fillna(w.median()).to_numpy(dtype=float)
         layers[lid] = LayerData(
             layer_id=lid, layer_type="point", crs="用户导入",
-            asof_date=str(spec.get("asof_date") or "—"), version="u1",
+            asof_date=str(spec.get("asof_date") or "-"), version="u1",
             fields=list(attrs), x=lx, y=lyy, attrs=attrs,
             aux_meta={"display_name": name},
         )
-        notes.append("图层“%s”：%d 个点%s" % (name, len(lx), "，含权重字段" if attrs else ""))
+        notes.append("图层%s：%d 个点%s" % (name, len(lx), "，含权重字段" if attrs else ""))
 
     ds = Dataset(
         grid=grid, units=units, obs=obs, layers=layers,

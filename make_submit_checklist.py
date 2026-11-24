@@ -30,7 +30,6 @@ st.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
 
 BLUE = RGBColor(0x1F, 0x38, 0x64)
 
-
 def _f(r, name="宋体", size=10.5, bold=False, color=None):
     r.font.name = name
     r.font.size = Pt(size)
@@ -40,14 +39,12 @@ def _f(r, name="宋体", size=10.5, bold=False, color=None):
     r._element.rPr.rFonts.set(qn("w:eastAsia"), name)
     return r
 
-
 def H(t):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(5)
     p.paragraph_format.keep_with_next = True
     _f(p.add_run(t), "黑体", 13, True, BLUE)
-
 
 def P(t, indent=True, bold=False):
     p = doc.add_paragraph()
@@ -58,7 +55,6 @@ def P(t, indent=True, bold=False):
     _f(p.add_run(t), "宋体", 10.5, bold)
     return p
 
-
 def _shade(cell, color="DCE6F1"):
     tcPr = cell._tc.get_or_add_tcPr()
     shd = OxmlElement("w:shd")
@@ -66,7 +62,6 @@ def _shade(cell, color="DCE6F1"):
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), color)
     tcPr.append(shd)
-
 
 def TBL(header, rows, widths, font=9.5):
     t = doc.add_table(rows=1, cols=len(header))
@@ -93,7 +88,6 @@ def TBL(header, rows, widths, font=9.5):
         for r in t.rows:
             r.cells[i].width = Cm(w)
     doc.add_paragraph().paragraph_format.space_after = Pt(3)
-
 
 # ============================ 标题 ============================
 p = doc.add_paragraph()
@@ -146,12 +140,12 @@ TBL(["字段", "建议填写", "说明"],
      ["权利取得方式", "原始取得", "自行开发，非受让、非继承"],
      ["权利范围", "全部权利", "两人共同享有"],
      ["著作权人", "合作方一、合作方二（两人）", "登记为多个著作权人，不填份额"],
-     ["软件分类", "应用软件", "—"],
+     ["软件分类", "应用软件", "-"],
      ["编程语言", "Python、JavaScript", "另有 HTML/CSS、YAML 配置"],
      ["源程序量", "11,089 行", "按非空行计"],
-     ["开发硬件环境", "PC，双核 2.0 GHz 以上，内存 4 GB 以上", "—"],
-     ["运行硬件环境", "同上", "—"],
-     ["开发软件环境", "Windows 10/11，Python 3.10 及以上", "—"],
+     ["开发硬件环境", "PC，双核 2.0 GHz 以上，内存 4 GB 以上", "-"],
+     ["运行硬件环境", "同上", "-"],
+     ["开发软件环境", "Windows 10/11，Python 3.10 及以上", "-"],
      ["运行软件环境", "Windows 10/11（64 位），现代浏览器", "无需安装 Python"],
      ["主要功能", "见下方说明", "控制在 200 字以内"],
      ["技术特点", "见下方说明", "控制在 200 字以内"]],
@@ -174,11 +168,11 @@ H("四、注意事项")
 
 P("1. 三处名称必须完全一致。", bold=True)
 P("申请表、源程序页眉、文档封面上的软件全称与版本号须逐字相同，"
-  "包括是否带“系统”二字、中间有无空格。本套材料统一为“空间显式批量评估工作台系统 V1.0”。")
+  "包括是否带系统二字、中间有无空格。本套材料统一为空间显式批量评估工作台系统 V1.0。")
 
 P("2. 发表状态须据实填写。", bold=True)
 P("本软件的源代码已推送至公开代码托管平台，构成著作权法意义上的发表。"
-  "申请表中若填“未发表”而实际已公开，可能被要求补正。建议填“已发表”，"
+  "申请表中若填未发表而实际已公开，可能被要求补正。建议填已发表，"
   "首次发表日期取首次公开提交之日。若希望避免该问题，可先将仓库转为私有，"
   "但已公开的历史不影响此前已构成发表的事实。")
 
@@ -187,8 +181,8 @@ P("材料已剔除 vendor 目录下的第三方依赖，仅保留自行开发的
   "如后续改动代码，需重新生成本材料。")
 
 P("4. 合作开发协议须双方签字。", bold=True)
-P("协议中已约定著作权由双方共同享有、登记为多个著作权人，与申请表的“权利范围”"
-  "“著作权人”两栏相互对应。建议一式两份均手写签名，扫描后上传。")
+P("协议中已约定著作权由双方共同享有、登记为多个著作权人，与申请表的权利范围"
+  "著作权人两栏相互对应。建议一式两份均手写签名，扫描后上传。")
 
 P("5. 身份证件须在有效期内。", bold=True)
 P("正反面复印或扫描在同一页，信息清晰可辨。")

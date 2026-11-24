@@ -12,11 +12,11 @@
     <div class="pickbox">
       <div class="pickhead">
         <h1>选择要看哪个区</h1>
-        <p>软件内置上海 16 个区的数据。每个“单元”是一个村/居委会的地块（不是小区），价格由地块内的小区挂牌价汇总而来。选一个区，加载后即可在地图上点选地块、做价格拆解。</p>
+        <p>软件内置上海 16 个区的数据。每个单元是一个村/居委会的地块（不是小区），价格由地块内的小区挂牌价汇总而来。选一个区，加载后即可在地图上点选地块、做价格拆解。</p>
       </div>
       <div class="pickgrid" id="pickGrid"></div>
       <div class="pickfoot">
-        <span class="hint" style="margin:0">价格来自 6,132 个小区 2024 年的真实挂牌价，按 800 米聚合到地块；挂牌价不等于成交价，通常略高。R² 是模型能解释的价格差异比例，样本越少、区内差异越大通常越低；崇明、金山仍为区级均价合成价。进入后可在顶部行政区下拉框随时切换。</span>
+        <span class="hint" style="margin:0">价格来自 6,132 个小区 2024 年的真实挂牌价，按 800 米聚合到地块；挂牌价不等于成交价，通常略高。R² 是模型能解释的价格差异比例，样本越少、区内差异越大通常越低；崇明、金山为区级均价估算价。进入后可在顶部行政区下拉框随时切换。</span>
       </div>
     </div>
   </div>
@@ -26,7 +26,7 @@
     <span class="brand-en">Spatial Explicit Batch Assessment</span>
     <span class="brand-cn">空间显式批量评估工作台</span>
   </div>
-  <div class="proj" id="projName">…</div>
+  <div class="proj" id="projName">...</div>
   <span class="district-label" id="districtLabel" hidden>行政区</span>
   <select class="district-select" id="districtSel" title="切换行政区" hidden></select>
   <button class="btn" id="btnDiag" title="查看整区尺度的空间诊断">全区诊断</button>
@@ -152,7 +152,7 @@
       <div class="empty" id="unitEmpty">在地图上点选一个单元</div>
       <div id="unitBody" hidden>
         <div class="uhead">
-          <span class="uid" id="uId">—</span>
+          <span class="uid" id="uId">-</span>
           <span class="utag" id="uAdmin"></span>
         </div>
         <div class="metrics" id="uMetrics"></div>
@@ -169,7 +169,7 @@
 
     <div class="tabbody" id="tab-decomp" hidden>
         <div id="decompEmpty" class="emptytip">
-          在左侧地图上点选一个地块，这里会把它拆成“各项因素各值多少钱”，<br>
+          在左侧地图上点选一个地块，这里会把它拆成各项因素各值多少钱，<br>
           并可按你自己的需求重新算出一个适配价。
         </div>
 
@@ -211,7 +211,7 @@
 
 <div class="tabbody" id="tab-factor" hidden>
       <p class="note" style="margin:0 0 8px">
-        每张卡片是一个因子。改完参数点右上“保存并重算”，模型与地图会立刻更新。
+        每张卡片是一个因子。改完参数点右上保存并重算，模型与地图会立刻更新。
         中文名可直接修改，用于报告与图例。
       </p>
       <div class="fcardwrap" id="factorCards"></div>
@@ -243,7 +243,7 @@
     <div class="dlg-head">
       <b>全区空间诊断</b>
       <span class="muted">整区尺度的残差、校准与比率研究，不是单个地块的结果</span>
-      <button class="x" id="diagClose">×</button>
+      <button class="x" id="diagClose">x</button>
     </div>
     <div class="dlg-body">
       <div class="diag-body">
@@ -280,7 +280,7 @@
     <div class="dlg-head">
       <b>导入我的数据</b>
       <span class="muted">支持 CSV / 文本；经纬度会自动换算为平面坐标</span>
-      <button class="x" id="impClose">×</button>
+      <button class="x" id="impClose">x</button>
     </div>
     <div class="dlg-body">
       <div class="form3">
@@ -294,7 +294,7 @@
       <div class="notes" id="impNotes"></div>
     </div>
     <div class="dlg-foot">
-      <button class="btn small" id="impReset">恢复演示数据</button>
+      <button class="btn small" id="impReset">恢复默认数据</button>
       <span class="grow"></span>
       <button class="btn small" id="impCancel">取消</button>
       <button class="btn small primary" id="impApply">导入并计算</button>
@@ -308,7 +308,7 @@
     <div class="dlg-head">
       <b>数据接入向导</b>
       <span class="muted">上传你的数据，系统自动识别文件类型和字段含义，无需改任何配置</span>
-      <button class="x" id="itkClose">×</button>
+      <button class="x" id="itkClose">x</button>
     </div>
     <div class="dlg-body">
 
@@ -361,7 +361,7 @@
     <div class="dlg-foot">
       <span class="muted small" id="itkStatus"></span>
       <span class="grow"></span>
-      <button class="btn small" id="itkSample">用上海示例试一下</button>
+      <button class="btn small" id="itkSample">载入上海数据试一下</button>
       <button class="btn small" id="itkCancel">取消</button>
       <button class="btn small primary" id="itkApply" disabled>确认并保存配置</button>
     </div>

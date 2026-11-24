@@ -29,7 +29,7 @@ if (-not $cf) {
 # 2) 后台启动本地服务
 Write-Host "[1/2] 启动本地服务（127.0.0.1:8765）…" -ForegroundColor Green
 $server = Start-Process -FilePath $py `
-    -ArgumentList "run_web.py","--no-open","--bundle","data/demo_xuhui.bundle","--port","8765" `
+    -ArgumentList "run_web.py","--no-open","--bundle","data/xuhui.bundle","--port","8765" `
     -PassThru -WindowStyle Minimized
 
 Start-Sleep -Seconds 12

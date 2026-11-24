@@ -10,7 +10,6 @@ __all__ = ["save_bundle", "load_bundle", "BUNDLE_VERSION"]
 
 BUNDLE_VERSION = 1
 
-
 def save_bundle(ds, path: str, notes=None, extra=None, slim: bool = True) -> str:
     """把 Dataset（含图层、因子、底图）与构建说明打包。
 
@@ -32,7 +31,6 @@ def save_bundle(ds, path: str, notes=None, extra=None, slim: bool = True) -> str
     with open(path, "wb") as fh:
         pickle.dump(payload, fh, protocol=4)
     return path
-
 
 def load_bundle(path: str):
     """返回 (Dataset, notes, extra)。"""

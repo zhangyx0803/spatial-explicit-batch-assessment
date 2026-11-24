@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""命令行入口：一键跑通"因子计算 → 模型训练 → 批量估值 → 空间诊断 → 报告输出"。
+"""命令行入口：一键跑通"因子计算 -> 模型训练 -> 批量估值 -> 空间诊断 -> 报告输出"。
 
 用法：
     python run_demo.py                       # 用 config/factors.yaml，产物写入 out/
@@ -29,11 +29,10 @@ from seba import __version__ as ENGINE_VERSION
 from seba.config import ProjectConfig
 from seba.diagnosis import district_summary, morans_i, residual_map_png
 from seba.engine import FactorEngine
-from seba.grid import build_demo_dataset
+from seba.grid import build_test_dataset
 from seba.ratios import ratio_study
 from seba.report import write_calibration_report, write_workbook
 from seba.stats import fit_and_evaluate
-
 
 def _hr(title: str = "") -> None:
     print("\n" + "=" * 74)
@@ -41,9 +40,8 @@ def _hr(title: str = "") -> None:
         print(title)
         print("=" * 74)
 
-
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="空间显式批量评估工作台（演示版）")
+    ap = argparse.ArgumentParser(description="空间显式批量评估工作台（版本）")
     ap.add_argument("--config", default=os.path.join("config", "factors.yaml"))
     ap.add_argument("--out", default="out")
     ap.add_argument("--only-check", action="store_true", help="只校验配置")
@@ -61,17 +59,17 @@ def main(argv=None) -> int:
     order = cfg.topological_order()
     print("工程：%s" % cfg.name)
     print("图层：%d 个；因子：%d 个" % (len(cfg.layers), len(cfg.factors)))
-    print("DAG 拓扑序：%s" % " → ".join(order[:6]) + (" …" if len(order) > 6 else ""))
+    print("DAG 拓扑序：%s" % " -> ".join(order[:6]) + (" ..." if len(order) > 6 else ""))
     dep = cfg.dependencies()
     edges = [(d, c) for c, ds in dep.items() for d in ds]
-    print("依赖边：%s" % ("、".join("%s→%s" % e for e in edges) if edges else "无"))
+    print("依赖边：%s" % ("、".join("%s->%s" % e for e in edges) if edges else "无"))
     if args.only_check:
         print("\n配置校验通过。")
         return 0
 
-    _hr("步骤 2 / 6  构建演示研究区与盲合成交易库")
+    _hr("步骤 2 / 6  构建内置测试场景与盲测交易库")
     aoi = cfg.raw["project"]["area_of_interest"]
-    scene = build_demo_dataset(
+    scene = build_test_dataset(
         seed=int(aoi.get("seed", 20261117)),
         nx=int(aoi.get("nx", 40)),
         ny=int(aoi.get("ny", 40)),
@@ -79,7 +77,7 @@ def main(argv=None) -> int:
     )
     ds = scene.dataset
     meta = ds.layers["road_net"].aux_meta
-    print("单元 %d 个（%d×%d，格网 %.0f m）" % (ds.n_units, ds.grid.nx, ds.grid.ny, ds.grid.cell))
+    print("单元 %d 个（%dx%d，格网 %.0f m）" % (ds.n_units, ds.grid.nx, ds.grid.ny, ds.grid.cell))
     print("成交样本 %d 条，价格类型 %s" % (ds.n_obs(), "/".join(sorted(set(ds.obs.price_type.tolist())))))
     print(
         "路网：节点 %d，连通分量 %d，最大分量占比 %.1f%%，悬挂节点 %d，单向边占比 %.1f%%"
@@ -91,7 +89,7 @@ def main(argv=None) -> int:
             meta["oneway_share"] * 100,
         )
     )
-    print("盲合成设定：%s" % ", ".join("%s=%s" % (k, v) for k, v in scene.truth.items()))
+    print("盲测设定：%s" % ", ".join("%s=%s" % (k, v) for k, v in scene.truth.items()))
 
     _hr("步骤 3 / 6  执行因子 DAG")
     engine = FactorEngine(cfg, ds)
@@ -133,7 +131,7 @@ def main(argv=None) -> int:
         % (k_blocks, bundle.cv_spatial["r2"], bundle.cv_spatial["rmse_log"], bundle.cv_spatial["mape"])
     )
     inflate = (1.0 - bundle.cv_random["rmse_log"] / bundle.cv_spatial["rmse_log"]) * 100
-    print("→ 随机 CV 的 RMSE 比空间块 CV 低 %.1f%%，即随机 K 折高估了精度（空间自相关）" % inflate)
+    print("-> 随机 CV 的 RMSE 比空间块 CV 低 %.1f%%，即随机 K 折高估了精度（空间自相关）" % inflate)
 
     # 安慰剂检验
     placebo = [c for c in feats if c.startswith("b_placebo")]
@@ -213,7 +211,7 @@ def main(argv=None) -> int:
     flagged = [d for d in districts if d[3] != "无明显偏离"]
     print("失配板块：%d 个%s" % (
         len(flagged),
-        ("（" + "、".join("%s %s" % (d[0], d[3]) for d in flagged[:5]) + ("…" if len(flagged) > 5 else "") + "）") if flagged else "",
+        ("（" + "、".join("%s %s" % (d[0], d[3]) for d in flagged[:5]) + ("..." if len(flagged) > 5 else "") + "）") if flagged else "",
     ))
 
     # ---- 落盘 ----
@@ -367,7 +365,6 @@ def main(argv=None) -> int:
         print("  %-24s %8.1f KB" % (name, os.path.getsize(p) / 1024.0))
     print("\n总耗时 %.1fs" % (time.perf_counter() - t_start))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

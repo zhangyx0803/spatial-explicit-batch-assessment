@@ -6,9 +6,9 @@
     python geocode_all.py [--limit N] [--delay 0.36]
 
 特性：
-    · 断点续传（缓存 _geocode_cache.json）
-    · 高德返回 GCJ-02，自动纠偏为 WGS84（与评估单元坐标系一致）
-    · 配额耗尽自动停止，下次接着跑
+    * 断点续传（缓存 _geocode_cache.json）
+    * 高德返回 GCJ-02，自动纠偏为 WGS84（与评估单元坐标系一致）
+    * 配额耗尽自动停止，下次接着跑
 """
 from __future__ import annotations
 
@@ -31,10 +31,9 @@ OUT = os.path.join(EXT, "community_xy.csv")
 AMAP = "https://restapi.amap.com/v3/place/text"
 UA = {"User-Agent": "seba-research"}
 
-# ---------------- GCJ-02 → WGS84 ----------------
+# ---------------- GCJ-02 -> WGS84 ----------------
 _A = 6378245.0
 _EE = 0.00669342162296594323
-
 
 def _transform_lat(x, y):
     ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * math.sqrt(abs(x))
@@ -43,14 +42,12 @@ def _transform_lat(x, y):
     ret += (160.0 * math.sin(y / 12.0 * math.pi) + 320 * math.sin(y * math.pi / 30.0)) * 2.0 / 3.0
     return ret
 
-
 def _transform_lon(x, y):
     ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * math.sqrt(abs(x))
     ret += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
     ret += (20.0 * math.sin(x * math.pi) + 40.0 * math.sin(x / 3.0 * math.pi)) * 2.0 / 3.0
     ret += (150.0 * math.sin(x / 12.0 * math.pi) + 300.0 * math.sin(x / 30.0 * math.pi)) * 2.0 / 3.0
     return ret
-
 
 def gcj2wgs(lon: float, lat: float):
     dlat = _transform_lat(lon - 105.0, lat - 35.0)
@@ -62,7 +59,6 @@ def gcj2wgs(lon: float, lat: float):
     dlon = (dlon * 180.0) / (_A / sqrtmagic * math.cos(rad) * math.pi)
     return lon - dlon, lat - dlat
 
-
 def load_cache():
     if os.path.exists(CACHE):
         try:
@@ -71,10 +67,8 @@ def load_cache():
             return {}
     return {}
 
-
 def save_cache(c):
     json.dump(c, open(CACHE, "w", encoding="utf-8"), ensure_ascii=False)
-
 
 def query(key, name, city, district):
     params = {
@@ -107,7 +101,6 @@ def query(key, name, city, district):
         if best is None or score > best[0]:
             best = (score, nm, ad, float(loc[0]), float(loc[1]))
     return best
-
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -174,10 +167,9 @@ def main() -> int:
         w = csv.writer(fh)
         w.writerow(["小区名", "区县", "挂牌单价", "经度", "纬度", "高德POI", "高德区县"])
         w.writerows(out)
-    print("\n完成：缓存 %d 条，其中有坐标 %d 条 → %s"
+    print("\n完成：缓存 %d 条，其中有坐标 %d 条 -> %s"
           % (len(cache), len(out), OUT))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

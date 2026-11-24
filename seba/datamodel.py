@@ -2,7 +2,7 @@
 """内部数据契约：unit / attr / obs / layer 四张表。
 
 三张主表描述"评什么、有什么、卖了多少"；图层注册表描述"因子运算从哪里取数据"。
-几何在本演示版中用规则格网表达（单元 = 格网单元），接口保持与矢量版一致：
+几何在本版本中用规则格网表达（单元 = 格网单元），接口保持与矢量版一致：
 单元提供 bbox、centroid、area 三个几何访问器，换成 geopandas 时只需替换本模块。
 """
 
@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 __all__ = ["Grid", "UnitTable", "ObsTable", "LayerData", "Dataset"]
-
 
 @dataclass
 class Grid:
@@ -53,7 +52,6 @@ class Grid:
             self.y0 + self.ny * self.cell,
         )
 
-
 @dataclass
 class UnitTable:
     """表 1：评估单元。x / y 为单元中心坐标（米），地图与空间权重都用它。"""
@@ -84,7 +82,6 @@ class UnitTable:
             raise KeyError("未知单元：%s" % unit_id)
         return int(hit[0])
 
-
 @dataclass
 class ObsTable:
     """表 3：成交观测。"""
@@ -99,7 +96,6 @@ class ObsTable:
 
     def __len__(self) -> int:
         return int(self.price.shape[0])
-
 
 @dataclass
 class LayerData:
@@ -117,7 +113,7 @@ class LayerData:
     y: Optional[np.ndarray] = None
     name: Optional[np.ndarray] = None
     attrs: Dict[str, np.ndarray] = field(default_factory=dict)
-    polygons: List[tuple] = field(default_factory=list)   # 本演示版：轴对齐矩形
+    polygons: List[tuple] = field(default_factory=list)   # 本版本：轴对齐矩形
     nodes: Optional[np.ndarray] = None                    # (n, 2) 路网节点
     edges: Optional[np.ndarray] = None                    # (m, 5) u, v, length, speed, oneway
     value: Optional[np.ndarray] = None                    # 栅格
@@ -125,7 +121,6 @@ class LayerData:
 
     def kind(self) -> str:
         return self.layer_type
-
 
 @dataclass
 class Dataset:

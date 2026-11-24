@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""把评估结果导出成单个 HTML 文件——双击就能看，不需要 Python、不需要服务器。
+"""把评估结果导出成单个 HTML 文件-双击就能看，不需要 Python、不需要服务器。
 
 用法：
     .venv\\Scripts\\python.exe make_static_html.py
-    .venv\\Scripts\\python.exe make_static_html.py --bundle data/demo_xuhui.bundle --out 结果.html
+    .venv\\Scripts\\python.exe make_static_html.py --bundle data/xuhui.bundle --out 结果.html
 """
 from __future__ import annotations
 
@@ -27,7 +27,6 @@ BASE_FIELDS = [
     ("p_high", "区间上限 P90", "money", False),
     ("resid", "残差（对数）", "plain", True),
 ]
-
 
 def build_payload(bundle: str) -> dict:
     from seba.webapp.state import AppState
@@ -58,7 +57,7 @@ def build_payload(bundle: str) -> dict:
                 continue
 
     # --- 预计算每个有成交单元的局部拆解 ---
-    print("  预计算价格拆解（%d 个单元）…" % len(ds.obs.unit_idx))
+    print("  预计算价格拆解（%d 个单元）..." % len(ds.obs.unit_idx))
     from seba.decompose import BUYER_HINT, decompose
 
     decs = {}
@@ -89,12 +88,11 @@ def build_payload(bundle: str) -> dict:
             } for it in d.items],
         }
         if (n + 1) % 50 == 0:
-            print("    %d / %d …" % (n + 1, len(set(int(x) for x in ds.obs.unit_idx))))
+            print("    %d / %d ..." % (n + 1, len(set(int(x) for x in ds.obs.unit_idx))))
     print("  拆解完成，用时 %.0f 秒，共 %d 个" % (__import__("time").time() - t0, len(decs)))
 
     return {"boot": boot, "fields": fields, "decomps": decs,
             "built": __import__("time").strftime("%Y-%m-%d %H:%M")}
-
 
 HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -195,7 +193,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}
   </div>
   <div class="proj" id="projName"></div>
   <div class="grow"></div>
-  <div class="tag">离线网页版 · 生成于 __BUILT__</div>
+  <div class="tag">离线网页版 * 生成于 __BUILT__</div>
 </header>
 
 <main>
@@ -290,8 +288,8 @@ function ramp(stops,t){
   return `rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
 }
 const NF = new Intl.NumberFormat('zh-CN');
-function money(v){ return v==null?'—':NF.format(Math.round(v)); }
-function brief(v){ return v==null?'—':(Math.abs(v)>=100?NF.format(Math.round(v)):v.toFixed(2)); }
+function money(v){ return v==null?'-':NF.format(Math.round(v)); }
+function brief(v){ return v==null?'-':(Math.abs(v)>=100?NF.format(Math.round(v)):v.toFixed(2)); }
 
 /* ---------- 画布 ---------- */
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -489,8 +487,8 @@ function kv(el, rows){
   el.innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
 }
 function build(){
-  document.getElementById('projName').textContent = String(P.name||'').split(' · ')[0];
-  document.title = (String(P.name||'评估结果').split(' · ')[0]) + ' · 空间显式批量评估工作台系统';
+  document.getElementById('projName').textContent = String(P.name||'').split(' * ')[0];
+  document.title = (String(P.name||'评估结果').split(' * ')[0]) + ' * 空间显式批量评估工作台系统';
   document.getElementById('mapTitle').textContent = F[S.field]?.name || '';
 
   const _n = B.network || {};
@@ -500,8 +498,8 @@ function build(){
     ['单元尺寸', (P.cell||0)+' 米（因子栅格）'],
     ['地理底图', '路网 2024 / 土地利用 2026 / OSM 设施'],
     ['价格来源', '14 区：6,132 个小区 2024 挂牌价；崇明/金山：区级均价合成'],
-    ['路网节点', _n.n_nodes == null ? '—（内置包未保存）' : NF.format(_n.n_nodes)],
-    ['吸附失败率', _n.snap_fail == null ? '—（内置包未保存）' : (_n.snap_fail*100).toFixed(2)+'%'],
+    ['路网节点', _n.n_nodes == null ? '-（内置包未保存）' : NF.format(_n.n_nodes)],
+    ['吸附失败率', _n.snap_fail == null ? '-（内置包未保存）' : (_n.snap_fail*100).toFixed(2)+'%'],
     ['因子数量', (B.factors||[]).length],
   ]);
 
@@ -515,8 +513,8 @@ function build(){
     ['空间留出解释度', `<span class="big">${((cvs.r2||0)*100).toFixed(1)}%</span>`],
     ['随机留出解释度', `${((cvr.r2||0)*100).toFixed(1)}%`],
     ['MAPE', ((tr.mape||0)).toFixed(1)+'%'],
-    ['离散系数 COD', `${cod==null?'—':cod.toFixed(1)} <span class="pill ${codOk?'ok':'bad'}">${codOk?'达标':'超限'}</span>`],
-    ['价格相关差 PRD', `${prd==null?'—':prd.toFixed(3)} <span class="pill ${prdOk?'ok':'bad'}">${prdOk?'达标':'超限'}</span>`],
+    ['离散系数 COD', `${cod==null?'-':cod.toFixed(1)} <span class="pill ${codOk?'ok':'bad'}">${codOk?'达标':'超限'}</span>`],
+    ['价格相关差 PRD', `${prd==null?'-':prd.toFixed(3)} <span class="pill ${prdOk?'ok':'bad'}">${prdOk?'达标':'超限'}</span>`],
     ['中位比率', (rt.median_ratio||0).toFixed(3)],
     ["Moran's I", (mo.i||0).toFixed(3)],
   ]);
@@ -657,7 +655,7 @@ function renderDecOut(){
     h += '<div class="row"><span>' + (diff > 0 ? '你为不需要的部分少付' : '你的支付意愿高于市场') + '</span>'
       + '<b style="color:' + (diff > 0 ? '#8a3b2c' : '#2f6b46') + '">' + NF.format(Math.round(Math.abs(diff))) + ' 元/㎡</b></div>';
     h += '<div class="note">按 ' + area + ' ㎡ 折算：市场 ' + NF.format(Math.round(d.model * area))
-      + ' 元 → 适配 ' + NF.format(Math.round(adapted * area)) + ' 元（差 '
+      + ' 元 -> 适配 ' + NF.format(Math.round(adapted * area)) + ' 元（差 '
       + NF.format(Math.round(Math.abs(diff) * area)) + ' 元）</div>';
   } else {
     h += '<div class="note">各项均为 50%（市场平均）时，适配价与市场平均价相同。调整滑杆即可看到差异。</div>';
@@ -685,12 +683,12 @@ function showDetail(k){
   card.hidden=false;
   const base=(R.arrays||{});
   const rows=[];
-  rows.push(['所属街道', U.admin?U.admin[k]:'—']);
+  rows.push(['所属街道', U.admin?U.admin[k]:'-']);
   rows.push(['面积', NF.format(Math.round(U.area?U.area[k]:0))+' ㎡']);
   rows.push(['坐标', `${Math.round(U.x[k])}, ${Math.round(U.y[k])}`]);
   rows.push(['有价格', B.has_obs&&B.has_obs[k]?'是':'否']);
-  rows.push(['估值中位', base.est_median?money(base.est_median[k]):'—']);
-  rows.push(['区间', base.p_low?`${money(base.p_low[k])} ~ ${money(base.p_high[k])}`:'—']);
+  rows.push(['估值中位', base.est_median?money(base.est_median[k]):'-']);
+  rows.push(['区间', base.p_low?`${money(base.p_low[k])} ~ ${money(base.p_high[k])}`:'-']);
   if(base.resid) rows.push(['残差', Number(base.resid[k]).toFixed(4)]);
 
   let html = '<table class="kv">'+rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')+'</table>';
@@ -724,15 +722,13 @@ build(); draw();
 </html>
 """
 
-
 def _short_name(v):
-    """项目名去掉“ · 真实地理 + 价格锚定”这类后缀，页面上只显示区名。"""
-    return str(v or "").split(" · ")[0]
-
+    """项目名去掉 * 真实地理 + 价格锚定这类后缀，页面上只显示区名。"""
+    return str(v or "").split(" * ")[0]
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bundle", default=os.path.join(HERE, "data", "demo_xuhui.bundle"))
+    ap.add_argument("--bundle", default=os.path.join(HERE, "data", "districts/徐汇区.bundle"))
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -740,13 +736,13 @@ def main() -> int:
         print("找不到数据包：%s" % args.bundle)
         return 2
 
-    print("正在读取数据包并构造结果 …")
+    print("正在读取数据包并构造结果 ...")
     payload = build_payload(args.bundle)
 
     title = (payload["boot"].get("project") or {}).get("name") or "评估结果"
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     html = (HTML_TEMPLATE
-            .replace("__TITLE__", title + " · 离线网页版")
+            .replace("__TITLE__", title + " * 离线网页版")
             .replace("__BUILT__", payload["built"])
             .replace("__PAYLOAD__", blob))
 
@@ -759,7 +755,6 @@ def main() -> int:
     print("已生成：%s" % out)
     print("大小：%.2f MB（单文件，双击即可在浏览器打开）" % (os.path.getsize(out) / 1048576))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """中文词表：把内部代码翻译成不懂编程也能看懂的说法。
 
-界面上一律显示中文，代码（英文标识）只在提示框里作为“技术标识”附注。
+界面上一律显示中文，代码（英文标识）只在提示框里作为技术标识附注。
 """
 
 from __future__ import annotations
@@ -128,12 +128,11 @@ FACTOR_CN: Dict[str, str] = {
     "b_placebo_2": "对照变量乙",
 }
 
-
 def factor_name(code: str, note: str = "") -> str:
     """因子中文名：优先查词表，其次用配置里的中文备注，最后回落代码。
 
-    备注里的括号说明（如“市级1.0/区级0.55/社区0.25”）是因子语义的一部分，
-    不能截断成“中心地加权可达性（市级1.0/区”，界面与导出都保留完整名称。
+    备注里的括号说明（如市级1.0/区级0.55/社区0.25）是因子语义的一部分，
+    不能截断成中心地加权可达性（市级1.0/区，界面与导出都保留完整名称。
     """
     if code in FACTOR_CN:
         return FACTOR_CN[code]
@@ -141,17 +140,14 @@ def factor_name(code: str, note: str = "") -> str:
         return note if len(note) <= 48 else note[:48]
     return code
 
-
 def op_name(op: str) -> str:
     return OP_CN.get(op, {}).get("name", op)
-
 
 def param_label(key: str) -> str:
     p = PARAM_CN.get(key)
     if not p:
         return key
     return p["name"] + ("（%s）" % p["unit"] if p.get("unit") else "")
-
 
 # 新建因子用的中文模板
 
@@ -211,7 +207,6 @@ TEMPLATES: List[Dict] = [
         "params": {"stat": "mean"},
     },
 ]
-
 
 def catalog() -> Dict:
     """一次性把词表发给前端。"""

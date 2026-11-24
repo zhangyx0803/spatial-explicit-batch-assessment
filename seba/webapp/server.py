@@ -29,7 +29,6 @@ __all__ = ["serve", "make_server"]
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
-
 class Handler(BaseHTTPRequestHandler):
     server_version = "SEBA/1.0"
     state: AppState = None          # 由 make_server 注入
@@ -190,7 +189,7 @@ class Handler(BaseHTTPRequestHandler):
 
             if p == "/api/reset":
                 with self.lock:
-                    self.state.reset_demo()
+                    self.state.reset_scene()
                 return self._json({"ok": True, **self.state.bootstrap()})
 
             if p == "/api/factors/update":
@@ -221,13 +220,12 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             return self._error(500, "%s: %s" % (type(exc).__name__, exc))
 
-
 def make_server(cfg_path: str, host: str = "127.0.0.1", port: int = 8765,
                 out_dir: str = "out_web", verbose: bool = True,
-                dataset=None, notes=None, source: str = "demo", prebuilt: bool = False,
+                dataset=None, notes=None, source: str = "builtin", prebuilt: bool = False,
    districts_dir: str = None):
     if verbose:
-        print("[1/2] 加载工程、执行因子 DAG …")
+        print("[1/2] 加载工程、执行因子 DAG ...")
     state = AppState(cfg_path, dataset=dataset, notes=notes, source=source,
                      prebuilt=prebuilt, districts_dir=districts_dir)
     if verbose and getattr(state, "ds", None) is None:
@@ -245,7 +243,6 @@ def make_server(cfg_path: str, host: str = "127.0.0.1", port: int = 8765,
         daemon_threads = True
 
     return _S((host, port), Handler), state
-
 
 def serve(cfg_path: str, host: str = "127.0.0.1", port: int = 8765,
           out_dir: str = "out_web", open_browser: bool = True) -> None:

@@ -36,7 +36,7 @@ function itkRead(file) {
 async function itkUpload(fileList) {
   const arr = Array.from(fileList || []);
   if (!arr.length) return;
-  $('itkStatus').textContent = `正在上传 ${arr.length} 个文件…`;
+  $('itkStatus').textContent = `正在上传 ${arr.length} 个文件...`;
   const payload = [];
   for (const f of arr) {
     payload.push({ name: f.name, b64: await itkRead(f) });
@@ -74,7 +74,7 @@ function itkEsc(s) {
 
 /* 分析 */
 async function itkSample() {
-  $('itkStatus').textContent = '正在识别内置的上海示例数据…';
+  $('itkStatus').textContent = '正在识别内置的上海数据...';
   try {
     const r = await fetch('/api/intake/sample', { method: 'POST' });
     const j = await r.json();
@@ -88,7 +88,7 @@ async function itkSample() {
 }
 
 async function itkAnalyze() {
-  $('itkStatus').textContent = '正在识别文件与字段…';
+  $('itkStatus').textContent = '正在识别文件与字段...';
   try {
     const r = await fetch('/api/intake/analyze', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -154,7 +154,7 @@ function itkRenderResult() {
       for (const [fld, label] of Object.entries(spec.fields)) {
         const cur = (chosen.fields || {})[fld] || '';
         const fconf = (list[0].field_conf || {})[fld];
-        const cols = ['<option value="">— 不使用 —</option>'].concat(
+        const cols = ['<option value="">- 不使用 -</option>'].concat(
           list[0].columns.map(c => `<option value="${itkEsc(c)}" ${c === cur ? 'selected' : ''}>${itkEsc(c)}</option>`)
         ).join('');
         html += `<div class="fieldrow">
@@ -212,7 +212,7 @@ function itkValidate() {
     const m = ITK.mapping[role];
     if (spec.required && !m) {
       okAll = false;
-      notes.push(`<b>缺少必需数据：${spec.label}</b> — 没有它无法运行，请补上传。`);
+      notes.push(`<b>缺少必需数据：${spec.label}</b> - 没有它无法运行，请补上传。`);
       continue;
     }
     if (m) {
@@ -227,7 +227,7 @@ function itkValidate() {
 
   if (okAll && ITK.mapping.units) {
     const u = ITK.mapping.units;
-    notes.push(`将用 <b>${itkBase(u.path)}</b> 作为评估单元边界，通过“${u.fields.district || '—'}”筛选区县。`);
+    notes.push(`将用 <b>${itkBase(u.path)}</b> 作为评估单元边界，通过${u.fields.district || '-'}筛选区县。`);
     const opt = ['roads', 'landuse', 'poi', 'obs'].filter(r => ITK.mapping[r]);
     if (opt.length) {
       notes.push('同时接入：' + opt.map(r => j.role_spec[r].label).join('、') + '。');
@@ -243,7 +243,7 @@ function itkValidate() {
 function itkBase(p) { return String(p).split(/[\\/]/).pop(); }
 
 async function itkApply() {
-  $('itkStatus').textContent = '正在保存配置…';
+  $('itkStatus').textContent = '正在保存配置...';
   try {
     const body = {
       mapping: ITK.mapping,

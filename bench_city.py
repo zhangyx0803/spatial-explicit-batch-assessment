@@ -17,7 +17,6 @@ print("scipy 可用:", HAS_SCIPY)
 
 import struct
 
-
 def read_polylines(path):
     segs = []
     with open(path, "rb") as f:
@@ -42,7 +41,6 @@ def read_polylines(path):
                     segs.append(s)
     return segs
 
-
 LAT0, LON0 = 31.2, 121.4
 KX = 111320.0 * math.cos(math.radians(LAT0))
 KY = 110540.0
@@ -54,7 +52,6 @@ print("读取 %d 段，%.1fs" % (len(segs), time.perf_counter() - t))
 t = time.perf_counter()
 key, nodes, edges = {}, [], []
 TOL = 8.0
-
 
 def nid(x, y):
     gx, gy = int(round(x / TOL)), int(round(y / TOL))
@@ -69,7 +66,6 @@ def nid(x, y):
     key[(gx, gy)] = j
     nodes.append((x, y))
     return j
-
 
 for seg in segs:
     x = (seg[:, 0] - LON0) * KX
@@ -111,7 +107,7 @@ for N in (200, 500):
         peak = max(peak, buf.nbytes)
         acc += np.where(np.isfinite(buf), 1.0, 0.0).sum(axis=0)
     el = time.perf_counter() - t
-    print("  %4d 个源 × %d 节点 → %6.2fs（单批内存 %.0f MB），平均每个源 %.1f ms"
+    print("  %4d 个源 x %d 节点 -> %6.2fs（单批内存 %.0f MB），平均每个源 %.1f ms"
           % (N, g.n_nodes, el, peak / 1e6, el / N * 1000))
 
 print("\n吸附（全市 500 m 格网）：")
@@ -121,6 +117,6 @@ NX = int(ext_x / 500); NY = int(ext_y / 500)
 gx, gy = np.meshgrid((np.arange(NX) + .5) * 500, (np.arange(NY) + .5) * 500)
 t = time.perf_counter()
 s = snap_points(gx.ravel(), gy.ravel(), xy, 300.0)
-print("  %d 个点 → %.2fs，失败率 %.1f%%（矩形外接范围含大量非城区）"
+print("  %d 个点 -> %.2fs，失败率 %.1f%%（矩形外接范围含大量非城区）"
       % (gx.size, time.perf_counter() - t, s.failed_share * 100))
 print("\n全市 500m 格网单元数: %d；250m: %d" % (gx.size, gx.size * 4))

@@ -3,7 +3,7 @@
 
 用户丢上来一堆文件，系统要做三件事：
   1. 认出每个文件是什么（评估单元边界 / 路网 / 土地利用 / POI / 成交表）
-  2. 认出每个字段是什么意思（哪怕是“道路等级”而不是 fclass，或 ALAND 这种缩写）
+  2. 认出每个字段是什么意思（哪怕是道路等级而不是 fclass，或 ALAND 这种缩写）
   3. 给出置信度，让用户在界面上确认或改
 
 判据有两条：字段名的语义相似度 + 字段取值的形态特征。
@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 __all__ = ["FileInfo", "inspect_file", "guess_roles", "build_datasource", "ROLES"]
-
 
 # 角色定义：系统需要哪些数据、每类数据需要哪些字段
 
@@ -112,7 +111,6 @@ CN_LANDUSE = {"居住", "住宅", "商业", "工业", "农田", "耕地", "林�
 ONEWAY_VALS = {"f", "t", "b", "1", "0", "是", "否", "单", "双", "单向", "双向",
                "true", "false", "yes", "no", "y", "n", "单行", "双行"}
 
-
 # 文件探测
 
 @dataclass
@@ -122,7 +120,7 @@ class FileInfo:
     geom: str                      # Point / Polyline / Polygon / None
     n_features: int
     columns: List[str]
-    sample: Dict[str, List[str]]   # 每列的去重样例值（最多 12 个）
+    sample: Dict[str, List[str]]   # 每列的去重取值（最多 12 个）
     card: Dict[str, int] = field(default_factory=dict)   # 每列实际不同取值个数（判断是否分类字段）
     crs: str = ""
     role: str = ""
@@ -152,12 +150,10 @@ class FileInfo:
             "error": self.error,
         }
 
-
 _SHAPE_GEOM = {1: "Point", 3: "Polyline", 5: "Polygon", 8: "Point",
                11: "Point", 13: "Polyline", 15: "Polygon", 18: "Point",
                21: "Point", 23: "Polyline", 25: "Polygon", 28: "Point",
                31: "Polyline"}
-
 
 def _dbf_meta(path: str, max_rows: int = 300) -> Tuple[List[str], Dict[str, List[str]], int, Dict[str, int]]:
     """只读 DBF 头与少量记录，不碰几何（155k 段路网也只花几十毫秒）。
@@ -218,7 +214,6 @@ def _dbf_meta(path: str, max_rows: int = 300) -> Tuple[List[str], Dict[str, List
     card = {c: len(seens[c]) for c in fields}
     return fields, samples, n_rec, card
 
-
 def _shp_geom(path: str) -> Tuple[str, int]:
     with open(path, "rb") as f:
         head = f.read(100)
@@ -227,7 +222,6 @@ def _shp_geom(path: str) -> Tuple[str, int]:
         st = struct.unpack("<i", head[32:36])[0]
         n_rec = struct.unpack(">i", head[24:28])[0]
     return _SHAPE_GEOM.get(st, ""), int(n_rec / 2)
-
 
 def _prj_crs(path: str) -> str:
     p = os.path.splitext(path)[0] + ".prj"
@@ -242,8 +236,6 @@ def _prj_crs(path: str) -> str:
     if "GEOGCS" in t:
         return "经纬度（WGS84 或相近）"
     return ""
-
-
 
 def _inspect_vector_generic(path: str) -> FileInfo:
     """geojson / kml / gdb：先读成统一结构再取样。"""
@@ -275,7 +267,6 @@ def _inspect_vector_generic(path: str) -> FileInfo:
         fi.crs = crs + "；图层 %s" % layer
     return fi
 
-
 def _inspect_xlsx(path: str) -> FileInfo:
     from .vec import read_table
 
@@ -289,7 +280,6 @@ def _inspect_xlsx(path: str) -> FileInfo:
         card[c] = len(seen)
     return FileInfo(path=path, kind="xlsx", geom="None", n_features=len(rows),
                     columns=cols, sample=sample, card=card, crs="")
-
 
 def inspect_file(path: str) -> FileInfo:
     ext = os.path.splitext(path)[1].lower()
@@ -368,12 +358,10 @@ def inspect_file(path: str) -> FileInfo:
     return FileInfo(path=path, kind=ext.lstrip("."), geom="None", n_features=0,
                     columns=[], sample={}, error="不支持的文件类型")
 
-
 # 字段语义打分
 
 def _norm(s: str) -> str:
     return str(s).strip().lower().replace(" ", "").replace("_", "").replace("-", "")
-
 
 def _name_score(col: str, role_field: str) -> float:
     n = _norm(col)
@@ -387,7 +375,6 @@ def _name_score(col: str, role_field: str) -> float:
         elif k in n or n in k:
             best = max(best, 0.75)
     return best
-
 
 def _value_score(values: List[str], role_field: str) -> float:
     v = [str(x).strip() for x in values if str(x).strip()]
@@ -467,7 +454,6 @@ def _value_score(values: List[str], role_field: str) -> float:
 
     return 0.0
 
-
 def _assign_fields(fi: FileInfo, role: str) -> Tuple[Dict[str, str], Dict[str, float]]:
     """给一个文件里的每个必需字段挑一列，做一对一贪心分配。"""
     spec = ROLES[role]["fields"]
@@ -476,7 +462,7 @@ def _assign_fields(fi: FileInfo, role: str) -> Tuple[Dict[str, str], Dict[str, f
         for col in fi.columns:
             ns = _name_score(col, fld)
             # 坐标类字段必须靠名字认：数值列太多（面积、楼层、总价都能是数字），
-            # 只看取值会把“建筑面积”误判成 Y 坐标
+            # 只看取值会把建筑面积误判成 Y 坐标
             if fld in ("x", "y") and ns < 0.2:
                 continue
             vals = fi.sample.get(col, [])
@@ -501,7 +487,6 @@ def _assign_fields(fi: FileInfo, role: str) -> Tuple[Dict[str, str], Dict[str, f
         used_flds.add(fld)
         used_cols.add(col)
     return fmap, fconf
-
 
 def _guess_role(fi: FileInfo) -> Tuple[str, float, str]:
     geom = fi.geom
@@ -533,7 +518,6 @@ def _guess_role(fi: FileInfo) -> Tuple[str, float, str]:
 
     return "", 0.0, "未能识别"
 
-
 def guess_roles(files: List[FileInfo]) -> List[FileInfo]:
     """给每个文件定角色、定字段；同类多文件时保留要素最多的那个。"""
     for fi in files:
@@ -554,7 +538,6 @@ def guess_roles(files: List[FileInfo]) -> List[FileInfo]:
         if fi.role and not fi.error and best.get(fi.role) is not fi:
             fi.role_reason += "（同类文件较多，选用要素数最多的那个）"
     return files
-
 
 # 生成数据源配置
 

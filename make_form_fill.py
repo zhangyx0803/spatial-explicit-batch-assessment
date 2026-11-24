@@ -43,7 +43,6 @@ st.paragraph_format.space_after = Pt(0)
 
 BLUE = RGBColor(0x1F, 0x38, 0x64)
 
-
 def _f(r, name="宋体", size=10.5, bold=False, color=None):
     r.font.name = name
     r.font.size = Pt(size)
@@ -53,14 +52,12 @@ def _f(r, name="宋体", size=10.5, bold=False, color=None):
     r._element.rPr.rFonts.set(qn("w:eastAsia"), name)
     return r
 
-
 def H(t):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(5)
     p.paragraph_format.keep_with_next = True
     _f(p.add_run(t), "黑体", 13, True, BLUE)
-
 
 def P(t, indent=True, bold=False, size=10.5):
     p = doc.add_paragraph()
@@ -70,7 +67,6 @@ def P(t, indent=True, bold=False, size=10.5):
         p.paragraph_format.first_line_indent = Pt(21)
     _f(p.add_run(t), "宋体", size, bold)
     return p
-
 
 def BOX(t):
     """可直接复制的填写内容：浅底、等宽、不缩进。"""
@@ -87,8 +83,6 @@ def BOX(t):
     _f(p.add_run(t), "宋体", 10.5)
     return p
 
-
-
 def LONG(t):
     """长文本：按段输出，正文左缩进，便于整段复制。"""
     for para in t.split("\n"):
@@ -99,7 +93,6 @@ def LONG(t):
         _f(p.add_run(para), "宋体", 10.5)
     return None
 
-
 def LBL(t, n=None):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(6)
@@ -108,7 +101,6 @@ def LBL(t, n=None):
     _f(p.add_run(txt), "黑体", 10.5, True)
     return p
 
-
 def _shade(cell, color="DCE6F1"):
     tcPr = cell._tc.get_or_add_tcPr()
     shd = OxmlElement("w:shd")
@@ -116,7 +108,6 @@ def _shade(cell, color="DCE6F1"):
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), color)
     tcPr.append(shd)
-
 
 def TBL(header, rows, widths, font=9.5):
     t = doc.add_table(rows=1, cols=len(header))
@@ -142,7 +133,6 @@ def TBL(header, rows, widths, font=9.5):
             r.cells[i].width = Cm(w)
     return t
 
-
 # ---------------- 封面标题 ----------------
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -155,10 +145,10 @@ p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_after = Pt(10)
 _f(p.add_run("空间显式批量评估工作台系统 V1.0"), "宋体", 11)
 
-P("本表对应中国版权保护中心在线表单中“软件开发信息”与“软件功能与特点”两页。"
+P("本表对应中国版权保护中心在线表单中软件开发信息与软件功能与特点两页。"
   "各字段后标注了表单的字数上限，框内文字可直接复制粘贴，字数已卡在上限之内。")
 
-P("软件全称统一填写“空间显式批量评估工作台系统”，版本号统一填写“V1.0”，"
+P("软件全称统一填写空间显式批量评估工作台系统，版本号统一填写V1.0，"
   "与软件说明书封面、源程序页眉逐字一致。")
 
 # ---------------- 一 ----------------
@@ -190,7 +180,7 @@ BOX("无需安装；Python运行时与依赖已打包进可执行文件；需Chr
 
 LBL("编程语言")
 P("在语言按钮中勾选 Python，再勾选 JavaScript 与 HTML；"
-  "“其他编程语言”补充填写 CSS。")
+  "其他编程语言补充填写 CSS。")
 BOX("Python、JavaScript、HTML、CSS")
 
 P("核心计算与数据处理为Python，前端界面为原生JavaScript与Canvas，"
@@ -199,8 +189,8 @@ P("核心计算与数据处理为Python，前端界面为原生JavaScript与Canv
 # ---------------- 三 ----------------
 H("三、源程序量与软件描述")
 LBL("源程序量")
-P("填写 10969 行。该数字取自提交的源程序文档末行行号，与PDF内容一致，不要另行估算。")
-BOX("10969")
+P("填写 10971 行。该数字取自提交的源程序文档末行行号，与PDF内容一致，不要另行估算。")
+BOX("10971")
 
 LBL("开发目的", 50)
 BOX("解决不动产批量评估中价格构成不可解释、无法按买方需求定制的问题，"
@@ -223,7 +213,7 @@ TBL(
     [
         ["文档鉴别材料", "一般交存",
          "空间显式批量评估工作台系统_V1.0_软件说明书.pdf"],
-        ["源程序", "—",
+        ["源程序", "-",
          "空间显式批量评估工作台系统_V1.0_源程序.pdf"],
         ["其他相关证明文件", "留空", "不提交"],
     ],
@@ -236,7 +226,7 @@ P("合作开发协议不作为软著必需材料提交，如审查环节另有�
 
 # ---------------- 五 ----------------
 H("五、容易出错的地方")
-P("1. 软件全称与版本号必须与说明书、源程序逐字一致，写成“1.0”或“v1.0”是常见退回原因。")
+P("1. 软件全称与版本号必须与说明书、源程序逐字一致，写成1.0或v1.0是常见退回原因。")
 P("2. 源程序量填写文档末行行号，而非按文件行数另行统计，两者口径不同。")
 P("3. 著作权人为两位合作者时，登记表著作权人一栏须写全两位，与合作协议保持一致。")
 P("4. 发表状态须与实际情况一致：代码仓库公开则填已发表，转为私有则改填未发表。")

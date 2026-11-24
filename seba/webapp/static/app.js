@@ -1,6 +1,6 @@
 ﻿'use strict';
 
-/* 空间显式批量评估工作台系统 V1.0 —— 前端 界面全中文；技术标识（英文代码）只在次要位置小字提示。 */
+/* 空间显式批量评估工作台系统 V1.0 - 前端 界面全中文；技术标识（英文代码）只在次要位置小字提示。 */
 
 const S = {
   boot: null, result: null,
@@ -21,18 +21,18 @@ const $ = (id) => document.getElementById(id);
 const NF = new Intl.NumberFormat('zh-CN');
 const PF = new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const price = (v) => (v === null || v === undefined || !Number.isFinite(v)) ? '—' : PF.format(v);
-const num = (v, d = 2) => (v === null || v === undefined || !Number.isFinite(v)) ? '—' : NF.format(+v.toFixed(d));
-const raw = (v, d = 4) => (v === null || v === undefined || !Number.isFinite(v)) ? '—' : v.toFixed(d);
+const price = (v) => (v === null || v === undefined || !Number.isFinite(v)) ? '-' : PF.format(v);
+const num = (v, d = 2) => (v === null || v === undefined || !Number.isFinite(v)) ? '-' : NF.format(+v.toFixed(d));
+const raw = (v, d = 4) => (v === null || v === undefined || !Number.isFinite(v)) ? '-' : v.toFixed(d);
 const brief = (v) => {
-  if (v === null || v === undefined || !Number.isFinite(v)) return '—';
+  if (v === null || v === undefined || !Number.isFinite(v)) return '-';
   const a = Math.abs(v);
   if (a >= 10000) return NF.format(Math.round(v));
   if (a >= 100) return v.toFixed(1);
   if (a >= 1) return v.toFixed(3);
   return v.toFixed(4);
 };
-const pct = (v, d = 1) => (v === null || v === undefined) ? '—' : (v * 100).toFixed(d) + '%';
+const pct = (v, d = 1) => (v === null || v === undefined) ? '-' : (v * 100).toFixed(d) + '%';
 const Q = (tip) => `<span class="q" data-tip="${tip}">?</span>`;
 
 /* 因子名过长时，把括号里的说明整体放到第二行 */
@@ -203,7 +203,7 @@ function layoutMap() {
 
   const fit = Math.min(availW / wData, availH / hData);   // 适配比例
   const s = fit * VIEW.k;
-  // 以“数据中心”为锚点，平移到画布中心，再叠加平移量
+  // 以数据中心为锚点，平移到画布中心，再叠加平移量
   TF.s = s;
   TF.x0 = (g.x0 + g.x1) / 2;
   TF.y1 = (g.y0 + g.y1) / 2;
@@ -644,7 +644,7 @@ function hitTest(ev) {
   if (!S.boot) return null;
   const rect = $('map').getBoundingClientRect();
   const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
-  // 屏幕 → 世界坐标（用当前视图变换的逆变换）
+  // 屏幕 -> 世界坐标（用当前视图变换的逆变换）
   const wx = TF.x0 + (px - TF.cx) / TF.s;
   const wy = TF.y1 - (py - TF.cy) / TF.s;
   const units = S.boot.units;
@@ -668,7 +668,7 @@ function hitTest(ev) {
       if (inside) return k;
     }
   }
-  // 没有面数据（内置演示场景/六边形模式）：退回到最近质心，阈值随缩放自适应
+  // 没有面数据（内置测试场景/六边形模式）：退回到最近质心，阈值随缩放自适应
   let best = null, bd = (22 / TF.s) ** 2;
   for (let k = 0; k < units.x.length; k++) {
     const dx = units.x[k] - wx, dy = units.y[k] - wy;
@@ -707,9 +707,9 @@ function renderStatus() {
   const rows = [
     ['数据接入', `${NF.format(b.project.n_units)} 个地块 / ${NF.format(b.project.n_obs)} 个有价格`],
     ['因子计算', `${b.project.engine_factors} 个${b.project.cache_hits ? '（缓存复用 ' + b.project.cache_hits + '）' : '（内置结果）'}`],
-    ['模型训练', r ? `解释度 ${(r.metrics.train.r2 * 100).toFixed(1)}%　${r.features.length} 个因子` : '—'],
-    ['批量估值', r ? `${NF.format(b.project.n_units)} 个地块` : '—'],
-    ['空间诊断', r ? `Moran's I ${raw(r.moran.i, 3)}　p ${raw(r.moran.p, 3)}` : '—'],
+    ['模型训练', r ? `解释度 ${(r.metrics.train.r2 * 100).toFixed(1)}%　${r.features.length} 个因子` : '-'],
+    ['批量估值', r ? `${NF.format(b.project.n_units)} 个地块` : '-'],
+    ['空间诊断', r ? `Moran's I ${raw(r.moran.i, 3)}　p ${raw(r.moran.p, 3)}` : '-'],
     ['成果输出', S.exported ? `已导出 ${S.exported} 个文件` : (S.busy ? '进行中' : '未导出')],
   ];
   $('statusList').innerHTML = rows.map(([t, v], i) =>
@@ -728,10 +728,10 @@ function renderMeta() {
     ['地理底图', builtin ? '内置' : '我的数据'],
     ['价格来源', builtin ? '2024 小区挂牌价' : '我的数据'],
     ['坐标系', 'WGS84'],
-    ['路网节点', n.n_nodes == null ? '—' : NF.format(n.n_nodes)],
-    ['连通分量', n.n_components == null ? '—' : NF.format(n.n_components)],
-    ['吸附失败率', n.snap_fail == null ? '—' : pct(n.snap_fail, 2)],
-    ['平均吸附距离', n.snap_mean_dist == null ? '—' : `${num(n.snap_mean_dist, 0)} 米`],
+    ['路网节点', n.n_nodes == null ? '-' : NF.format(n.n_nodes)],
+    ['连通分量', n.n_components == null ? '-' : NF.format(n.n_components)],
+    ['吸附失败率', n.snap_fail == null ? '-' : pct(n.snap_fail, 2)],
+    ['平均吸附距离', n.snap_mean_dist == null ? '-' : `${num(n.snap_mean_dist, 0)} 米`],
     ['因子数量', `${NF.format(b.factors.length)} 个（参与建模 ${S.result.features.length} 个）`],
   ];
   $('metaList').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -844,7 +844,7 @@ function renderMetrics() {
     ['拟合度 R²（空间留块）' + Q('把一整片区域留出后再预测，更接近真实外推能力。通常会低于训练 R²，差距越大说明模型越依赖局部样本。'), raw(m.cv_spatial.r2, 3), m.cv_spatial.r2 >= .85 ? 'ok' : 'mid'],
     ['平均误差 MAPE' + Q('预测值与实际值的平均绝对百分比误差，越低越好。'), raw(m.cv_spatial.mape, 1) + '%', m.cv_spatial.mape <= 20 ? 'ok' : 'bad'],
     ['离散系数 COD' + Q('IAAO 比率检验指标，衡量估值是否集中一致。住宅通常宜小于 15，越小越好。'), raw(r.ratio.cod, 1), codOk ? 'ok' : 'bad'],
-    ['价格相关差 PRD' + Q('估值是否随价格水平系统性偏离。宜在 0.98–1.03 之间，接近 1 为好。'), raw(r.ratio.prd, 3), prdOk ? 'ok' : 'bad'],
+    ['价格相关差 PRD' + Q('估值是否随价格水平系统性偏离。宜在 0.98-1.03 之间，接近 1 为好。'), raw(r.ratio.prd, 3), prdOk ? 'ok' : 'bad'],
     ['残差空间自相关' + Q('Moran\'s I，检验残差是否在空间上聚集。接近 0 表示误差随机；p<0.05 且 I>0 表示成片高估或低估，说明还有地理因素没进模型。'), raw(r.moran.i, 3), moranOk ? 'ok' : 'bad'],
   ];
   $('metrics').innerHTML = items.map(([k, v, c]) =>
@@ -878,7 +878,7 @@ function renderCoef() {
   $('coefTbl').querySelector('tbody').innerHTML = S.result.coef.map(r => {
     const [name, coef, se, t, p, star] = r;
     return `<tr><td class="txt">${nameHtml(name)}</td><td class="r">${coef}</td><td class="r">${t}</td>
-            <td class="r ${star ? 'sig' : 'ns'}" title="p = ${p}">${star || '—'}</td></tr>`;
+            <td class="r ${star ? 'sig' : 'ns'}" title="p = ${p}">${star || '-'}</td></tr>`;
   }).join('');
 }
 
@@ -895,7 +895,7 @@ function renderDiag() {
   const bad = mo.p < 0.05 && mo.i > mo.e;
   $('moranCard').innerHTML = `
     <div class="big ${bad ? 'bad' : ''}">${raw(mo.i, 4)}</div>
-    <div class="sub">期望值 ${raw(mo.e, 4)} · z ${raw(mo.z, 2)} · p ${raw(mo.p, 4)} · ${mo.n_perm} 次随机置换</div>
+    <div class="sub">期望值 ${raw(mo.e, 4)} * z ${raw(mo.z, 2)} * p ${raw(mo.p, 4)} * ${mo.n_perm} 次随机置换</div>
     <div class="verdict">${mo.verdict}</div>`;
 
   $('distTbl').querySelector('tbody').innerHTML = S.result.districts.slice(0, 12).map(d => {
@@ -927,10 +927,10 @@ async function showUnit(idx) {
     const _useTxt = u.use_detail || (u.use_type === '住宅' ? '住宅' : '非住宅');
     $('uAdmin').innerHTML =
       `<span class="kv"><i>用途</i><b>${_useTxt}</b></span>`
-      + `<span class="kv"><i>所属街道</i><b>${u.admin || '—'}</b></span>`
+      + `<span class="kv"><i>所属街道</i><b>${u.admin || '-'}</b></span>`
       + `<span class="kv"><i>占地面积</i><b>${num(u.area, 0)} ㎡</b></span>`;
 
-    const gTxt = { ok: '可直接用', warn: '建议复核', bad: '需人工核', unknown: '—' }[u.grade] || '—';
+    const gTxt = { ok: '可直接用', warn: '建议复核', bad: '需人工核', unknown: '-' }[u.grade] || '-';
     const gCls = { ok: 'ok', warn: 'mid', bad: 'bad' }[u.grade] || 'mid';
     const nonres = u.use_type && u.use_type !== '住宅';
     if (nonres) {
@@ -950,14 +950,14 @@ async function showUnit(idx) {
     const _tt2 = $('uFactorTitle'); if (_tt2) _tt2.style.display = '';
     const items = [
       ['估值单价（中位）', price(u.est_median) + ' 元/㎡', 'mid'],
-      ['校准后估值', u.est_cal != null ? price(u.est_cal) + ' 元/㎡' : '—', 'mid'],
+      ['校准后估值', u.est_cal != null ? price(u.est_cal) + ' 元/㎡' : '-', 'mid'],
       ['本单元可信度' + Q('按所在街道的样本量与偏差分级：可直接用 = 样本≥12 且偏差≤8%；建议复核 = 样本≥6 且偏差≤20%；需人工核 = 样本不足或偏差过大。'), gTxt, gCls],
       ['估值单价（均值）', price(u.est_mean) + ' 元/㎡', 'mid'],
       ['价格下限 P10', price(u.p_low) + ' 元/㎡', 'mid'],
       ['价格上限 P90', price(u.p_high) + ' 元/㎡', 'mid'],
       ['残差' + Q('实际价格与模型估计的对数差。正数表示模型低估，负数表示模型高估；只有有价格的地块才有残差。'), u.resid == null ? '本单元无价格' : raw(u.resid, 3),
         u.resid == null ? 'mid' : (u.resid > 0 ? 'bad' : 'ok')],
-      ['实际价格', u.obs ? price(u.obs.sale_unit_price) + ' 元/㎡' : '—', 'mid'],
+      ['实际价格', u.obs ? price(u.obs.sale_unit_price) + ' 元/㎡' : '-', 'mid'],
     ];
     $('uMetrics').innerHTML = items.map(([k, v, c]) =>
       `<div class="mrow" style="grid-column:span 2"><span class="k">${k}</span>
@@ -965,7 +965,7 @@ async function showUnit(idx) {
 
     $('uFactorTbl').querySelector('tbody').innerHTML = u.factors.map(f => `
       <tr><td class="txt">${nameHtml(f.name)}</td><td class="r">${brief(f.value)}</td>
-      <td class="r ${f.selected ? 'sig' : 'ns'}">${f.selected ? '✓' : ''}</td></tr>`).join('');
+      <td class="r ${f.selected ? 'sig' : 'ns'}">${f.selected ? '已选' : ''}</td></tr>`).join('');
   } catch (e) { toast(e.message, true); }
 }
 
@@ -991,7 +991,7 @@ function renderFactorCards() {
       </div>
     </div>`;
   };
-  // 本区恒定、无法估计的因子直接不展示，避免“淡色但还能勾选”的误解。
+  // 本区恒定、无法估计的因子直接不展示，避免淡色但还能勾选的误解。
   box.innerHTML = valid.map(card).join('') || '<div class="muted" style="padding:8px">本区没有可用因子</div>';
 }
 
@@ -1169,7 +1169,7 @@ const SLOTS = [
     kind: 'network', title: '③ 道路网', req: false,
     keys: [['fx', '起点 X/经度'], ['fy', '起点 Y/纬度'], ['tx', '终点 X/经度'],
            ['ty', '终点 Y/纬度'], ['cls', '道路等级'], ['oneway', '是否单向']],
-    tip: '一行一条路段。不导入时系统会生成示意路网，路网类因子仅作演示。',
+    tip: '一行一条路段。不导入时系统会生成近似路网，路网类因子仅用于调试。',
   },
   {
     kind: 'layer', title: '④ 设施点位', req: false, multi: true,
@@ -1222,7 +1222,7 @@ function renderLayerSlots() {
   if (!IMP.layers.length) return `<div class="slot-tip">尚未选择文件（学校、医院、地铁站、商业网点等，可多选）</div>`;
   return IMP.layers.map((ly, i) => `
     <div style="border-top:1px solid var(--line-soft);padding-top:6px;margin-top:6px">
-      <input class="input name" data-lname="${i}" value="${ly.name}" placeholder="给这份图层起个名字，如“学校”">
+      <input class="input name" data-lname="${i}" value="${ly.name}" placeholder="给这份图层起个名字，如学校">
       ${mappingHTML({ kind: 'layer', keys: SLOTS[3].keys }, ly, 'L' + i)}
     </div>`).join('');
 }
@@ -1294,20 +1294,20 @@ function collectSpec() {
 }
 
 async function applyImport() {
-  if (!IMP.units) { toast('请先选择“评估单元”文件', true); return; }
-  if (!IMP.obs) { toast('请先选择“成交记录”文件', true); return; }
+  if (!IMP.units) { toast('请先选择评估单元文件', true); return; }
+  if (!IMP.obs) { toast('请先选择成交记录文件', true); return; }
   try {
     setBusy(true);
     const j = await postJSON('/api/import', { spec: collectSpec() });
     adopt(j);
-    $('importNotes').innerHTML = (j.notes || []).map(n => `<p>· ${n}</p>`).join('');
+    $('importNotes').innerHTML = (j.notes || []).map(n => `<p>* ${n}</p>`).join('');
     $('importModal').hidden = true;
     toast('数据导入完成');
   } catch (e) { toast('导入失败：' + e.message, true); }
   finally { setBusy(false); }
 }
 
-async function resetDemo() {
+async function resetScene() {
   try {
     setBusy(true);
     const j = await postJSON('/api/reset', {});
@@ -1316,7 +1316,7 @@ async function resetDemo() {
     $('importNotes').innerHTML = '';
     adopt(j);
     $('importModal').hidden = true;
-    toast('已恢复演示数据');
+    toast('已恢复默认数据');
   } catch (e) { toast(e.message, true); }
   finally { setBusy(false); }
 }
@@ -1403,7 +1403,7 @@ $('btnData').onclick = () => { renderSlots(); $('importModal').hidden = false; }
 $('impClose').onclick = () => { $('importModal').hidden = true; };
 $('impCancel').onclick = () => { $('importModal').hidden = true; };
 $('impApply').onclick = applyImport;
-$('impReset').onclick = resetDemo;
+$('impReset').onclick = resetScene;
 
 const _openDiag = () => {
   if (!S.result) { toast('请先选择一个区'); return; }
@@ -1459,7 +1459,7 @@ const GEOM_HINT = {
       drawMap();
     };
   });
-  // 支持 #hex / #dot 直达（便于演示与截图）
+  // 支持 #hex / #dot 直达（便于调试与截图）
   const h = location.hash.replace('#', '');
   if (h === 'hex' || h === 'dot' || h === 'poly') {
     const tb = box.querySelector('[data-geom="' + h + '"]');
@@ -1478,7 +1478,7 @@ async function showDecomp(idx) {
   $('decompEmpty').hidden = true;
   $('decompBody').hidden = false;
   $('dcTbl').querySelector('tbody').innerHTML =
-    '<tr><td colspan="3" class="muted" style="padding:14px">正在拆解……（首次约 1–3 秒）</td></tr>';
+    '<tr><td colspan="3" class="muted" style="padding:14px">正在拆解......（首次约 1-3 秒）</td></tr>';
   try {
     const d = await postJSON('/api/decompose', { i: idx, price: null, radius: 1500, min_n: 120 });
     DEC.data = d;
@@ -1496,7 +1496,7 @@ async function rerunDecomp() {
   if (DEC.idx == null) return;
   const p = parseFloat($('dcPrice').value) || null;
   $('dcTbl').querySelector('tbody').innerHTML =
-    '<tr><td colspan="3" class="muted" style="padding:14px">正在按新价格重新拆解……</td></tr>';
+    '<tr><td colspan="3" class="muted" style="padding:14px">正在按新价格重新拆解......</td></tr>';
   try {
     const d = await postJSON('/api/decompose', { i: DEC.idx, price: p, radius: 1500, min_n: 120 });
     DEC.data = d;
@@ -1511,10 +1511,10 @@ function renderDecomp() {
   if (d.blocked) {
     $('dcUnit').textContent = d.unit_name || '';
     $('dcMeta').textContent = '　非住宅用地';
-    $('dcBase').textContent = '—';
-    $('dcModel').textContent = '—';
-    $('dcUnexp').textContent = '—';
-    $('dcSample').textContent = '—';
+    $('dcBase').textContent = '-';
+    $('dcModel').textContent = '-';
+    $('dcUnexp').textContent = '-';
+    $('dcSample').textContent = '-';
     $('dcPrice').value = '';
     $('dcQuality').innerHTML = '';
     $('dcResult').innerHTML = '';
@@ -1638,7 +1638,7 @@ window.addEventListener('load', () => {
   setTimeout(go, 800);
 });
 
-/* 场景深链：#scene=xxx  —— 用于说明书截图，可稳定复现每个步骤的界面状态 */
+/* 场景深链：#scene=xxx  - 用于说明书截图，可稳定复现每个步骤的界面状态 */
 const SCENES = {
   home:      {},                                              // 初始地图
   hex:       { geom: 'hex' },                                 // 六边形网格
@@ -1717,7 +1717,7 @@ function runScene() {
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       const hit = hitTest({ clientX: cx, clientY: cy });
       const t = document.getElementById('stageTitle');
-      if (t && !sc.quiet) t.textContent = '悬停命中测试：中心点 → '
+      if (t && !sc.quiet) t.textContent = '悬停命中测试：中心点 -> '
         + (hit === null ? '未命中' : S.boot.units.id[hit] + '（索引 ' + hit + '）');
       const tip = document.getElementById('tip');
       if (hit !== null && tip) {
@@ -1823,7 +1823,7 @@ const DRAG = { on: false, x: 0, y: 0, moved: false };
 
 function syncZoomLabel() {
   const el = $('zoomLbl');
-  if (el) el.textContent = VIEW.k === 1 ? '1×' : VIEW.k.toFixed(1) + '×';
+  if (el) el.textContent = VIEW.k === 1 ? '1x' : VIEW.k.toFixed(1) + 'x';
 }
 
 $('btnZoomReset') && ($('btnZoomReset').onclick = () => {
@@ -1837,7 +1837,7 @@ async function showPicker(list, current) {
   const grid = $('pickGrid');
   grid.innerHTML = list.map(d => `
     <button class="pickcard" data-name="${d.name}">
-      <b>${d.name}${d.name === current ? ' ✓' : ''}</b>
+      <b>${d.name}${d.name === current ? ' 当前' : ''}</b>
       <span>${d.units ? NF.format(d.units) + ' 个地块' : ''}${d.obs ? '　' + NF.format(d.obs) + ' 个有价格' : ''}</span>
       <span class="${d.r2 >= 0.85 ? 'r2' : ''}">${d.r2 != null ? '模型解释度 ' + (d.r2 * 100).toFixed(1) + '%' : (d.mb ? d.mb + ' MB' : '')}</span>
     </button>`).join('');
@@ -1852,7 +1852,7 @@ async function showPicker(list, current) {
     btn.onclick = async () => {
       const name = btn.dataset.name;
       grid.querySelectorAll('.pickcard').forEach(b => b.classList.add('loading'));
-      btn.querySelector('span').textContent = '正在加载……';
+      btn.querySelector('span').textContent = '正在加载......';
       try {
         const b2 = await postJSON('/api/district', { name });
         wrap.hidden = true;
@@ -1920,7 +1920,7 @@ function renderCalib() {
   }
   const tag = { ok: ['可直接用', 'ok'], warn: ['建议复核', 'mid'], bad: ['需人工核', 'bad'] };
   tb.innerHTML = cal.groups.slice(0, 20).map(g => {
-    const t = tag[g.grade] || ['—', 'mid'];
+    const t = tag[g.grade] || ['-', 'mid'];
     const pct = (v) => (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
     return '<tr><td class="txt">' + g.name + '</td>'
       + '<td class="r">' + g.n + '</td>'

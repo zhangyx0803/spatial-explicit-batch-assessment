@@ -4,13 +4,13 @@
 const TOUR_STEPS = [
   {
     sel: '#btnIntake', title: '第一步：接入你的数据',
-    text: '点这里上传数据文件。系统会自动认出哪些是评估单元边界、哪些是路网、哪些是土地利用，并且自动识别每个字段的含义——你不需要改任何配置。',
+    text: '点这里上传数据文件。系统会自动认出哪些是评估单元边界、哪些是路网、哪些是土地利用，并且自动识别每个字段的含义-你不需要改任何配置。',
     place: 'bottom',
   },
   {
     sel: '#itkDrop', title: '第二步：把文件拖进来',
     text: '支持 Shapefile（.shp 要连 .dbf 一起）、GeoJSON、KML、FileGDB、Excel 和 CSV。'
-      + '评估单元边界是必需的，其余可以缺——缺哪类，对应的因子会自动停用。',
+      + '评估单元边界是必需的，其余可以缺-缺哪类，对应的因子会自动停用。',
     place: 'bottom', before: () => { itkOpen(); },
   },
   {
@@ -21,7 +21,7 @@ const TOUR_STEPS = [
   },
   {
     sel: '#itkApply', title: '第四步：确认，系统立刻出结果',
-    text: '点这个按钮，配置会保存下来，并且马上用你的数据跑一遍——不用重启，不用改代码。',
+    text: '点这个按钮，配置会保存下来，并且马上用你的数据跑一遍-不用重启，不用改代码。',
     place: 'left',
   },
   {
@@ -32,13 +32,13 @@ const TOUR_STEPS = [
   },
   {
     sel: '.col.left', title: '第六步：换图层看不同结果',
-    text: '“显示图层”可以切换看估值、残差、置信区间、各因子分布。'
-      + '“数据图层”可以叠加地铁站、商业设施、学校等点位。',
+    text: '显示图层可以切换看估值、残差、置信区间、各因子分布。'
+      + '数据图层可以叠加地铁站、商业设施、学校等点位。',
     place: 'right',
   },
   {
     sel: '.tab[data-tab="factor"]', title: '第七步：调因子',
-    text: '在“因子设置”里勾选或取消因子，右侧立刻重算。想看看去掉地铁会怎样？取消勾选就行。',
+    text: '在因子设置里勾选或取消因子，右侧立刻重算。想看看去掉地铁会怎样？取消勾选就行。',
     place: 'left',
     before: () => { const t = document.querySelector('.tab[data-tab="factor"]'); if (t) t.click(); },
   },
@@ -115,7 +115,7 @@ function tourShow() {
 }
 
 /* 目标位置会变（项目名、计时器、数据加载都会重排），必须持续跟踪，
-   否则高亮框会停在旧坐标上，看起来就是“没对齐”。 */
+   否则高亮框会停在旧坐标上，看起来就是没对齐。 */
 function tourTrack() {
   if (!TOUR.on) return;
   cancelAnimationFrame(TOUR.raf);

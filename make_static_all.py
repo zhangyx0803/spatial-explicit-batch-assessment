@@ -23,7 +23,7 @@ OUT = os.path.join(HERE, "dist_static")
 INDEX = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>空间显式批量评估工作台系统 · 离线成果</title>
+<title>空间显式批量评估工作台系统 * 离线成果</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#eef0f3;font:13px/1.6 "Microsoft YaHei","PingFang SC",sans-serif;color:#232a31}
@@ -41,7 +41,7 @@ a.card span{display:block;font-size:10.5px;color:#8d959f;font-family:Consolas,mo
 @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><div class="wrap">
 <h1>空间显式批量评估工作台系统</h1>
-<p class="sub">离线成果浏览 · 内置上海 16 个区 · 点击任意一个区打开</p>
+<p class="sub">离线成果浏览 * 内置上海 16 个区 * 点击任意一个区打开</p>
 <div class="grid">__CARDS__</div>
 <div class="foot">
 每个区是一个独立 HTML 文件，双击即可用浏览器打开，不需要服务器与网络。<br>
@@ -53,7 +53,6 @@ a.card span{display:block;font-size:10.5px;color:#8d959f;font-family:Consolas,mo
 CARD = ('<a class="card" href="{file}"><b>{name}</b>'
         '<span>{units} 个地块　{obs} 个有价格</span>'
         '<span>模型解释度 {r2}%</span></a>')
-
 
 def main() -> int:
     from make_static_html import HTML_TEMPLATE, build_payload
@@ -92,7 +91,7 @@ def main() -> int:
             file=fn, name=name,
             units="{:,.0f}".format(proj.get("n_units") or 0),
             obs="{:,.0f}".format(proj.get("n_obs") or 0),
-            r2=("%.1f" % (r2 * 100)) if r2 is not None else "—",
+            r2=("%.1f" % (r2 * 100)) if r2 is not None else "-",
         ))
         print("[%2d/%d] %-6s %5.2f MB  %.0fs" % (i, len(names), name, mb, time.time() - t0), flush=True)
 
@@ -103,7 +102,6 @@ def main() -> int:
     print("\n入口页：%s" % os.path.join(OUT, "index.html"))
     print("共 %d 个区，合计 %.1f MB，用时 %.1f 分钟" % (len(cards), tot, (time.time() - t_all) / 60))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -19,7 +19,7 @@ if exist ".venv\Scripts\python.exe" (
 echo [启动] 正在加载数据包并启动服务...
 echo.
 
-"%PY%" run_web.py --no-open --bundle data/demo_xuhui.bundle --port 8765
+"%PY%" run_web.py --no-open --bundle data/xuhui.bundle --port 8765
 if errorlevel 1 (
     echo.
     echo [失败] 启动出错，请把上面的错误信息发给开发者。

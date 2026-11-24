@@ -32,10 +32,8 @@ LAT0, LON0 = 31.2304, 121.4737
 KX = 111320.0 * math.cos(math.radians(LAT0))
 KY = 110540.0
 
-
 def proj(lon, lat):
     return (lon - LON0) * KX, (lat - LAT0) * KY
-
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -105,10 +103,9 @@ def main() -> int:
         w = csv.writer(fh)
         w.writerow(["单元ID", "区县", "居委", "匹配小区数", "中位挂牌价"])
         w.writerows(rows)
-    print("\n合计 %d/%d = %.0f%% 单元有真实小区价 → %s"
+    print("\n合计 %d/%d = %.0f%% 单元有真实小区价 -> %s"
           % (total_hit, total_u, 100 * total_hit / max(1, total_u), OUT))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

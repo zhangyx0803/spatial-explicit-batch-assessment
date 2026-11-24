@@ -5,7 +5,7 @@
     .venv\\Scripts\\python.exe -m pip install pyinstaller
     .venv\\Scripts\\python.exe build_exe.py
 
-产物：dist/空间显式批量评估工作台.exe（约 60–90 MB，双击即用）
+产物：dist/空间显式批量评估工作台.exe（约 60-90 MB，双击即用）
 """
 from __future__ import annotations
 
@@ -46,7 +46,6 @@ HIDDEN = [
     "PIL",
 ]
 
-
 def main() -> int:
     try:
         import PyInstaller  # noqa: F401
@@ -75,7 +74,7 @@ def main() -> int:
             cmd += ["--add-data", "%s%s%s" % (src, os.pathsep, dst)]
     cmd.append(os.path.join(HERE, "exe_main.py"))
 
-    print("正在打包（首次约 2–5 分钟）……\n")
+    print("正在打包（首次约 2-5 分钟）......\n")
     rc = subprocess.call(cmd, cwd=HERE)
     if rc != 0:
         print("\n打包失败，退出码 %d" % rc)
@@ -90,7 +89,6 @@ def main() -> int:
         print("=" * 60)
         print("把这个 exe 发给别人，双击即可使用（无需装 Python）。")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())
