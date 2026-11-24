@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """空间误差诊断：残差的全局空间自相关检验、失配板块清单、残差专题图。
 
-局部统计量（Getis-Ord Gi*、LISA）按《实现方案》第八章的功能边界划归件 3，
-本件只做全局检验与聚合诊断。
+局部统计量（Getis-Ord Gi*、LISA）不在本模块内，这里只做全局检验与聚合诊断。
 """
 
 from __future__ import annotations

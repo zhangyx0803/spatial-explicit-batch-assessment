@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """路网：CSR 稀疏图、阻抗加权 Dijkstra、起终点吸附。
 
-按《实现方案》的选型，图结构、阻抗加权与 Dijkstra 全部自建（scipy.sparse + 堆），
-不调用 osmnx 的图算法，只把 osmnx 当作数据下载器使用。
+图结构、阻抗加权与 Dijkstra 均为自建实现（scipy.sparse + 堆）。
+不调用 osmnx 的图算法，只把它当作数据下载器。
 
 提供两条求解路径：
   dijkstra()                - 节点图上的标准有界 Dijkstra（批量计算用，最快）

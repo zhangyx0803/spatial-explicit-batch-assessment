@@ -1638,7 +1638,7 @@ window.addEventListener('load', () => {
   setTimeout(go, 800);
 });
 
-/* 场景深链：#scene=xxx  - 用于说明书截图，可稳定复现每个步骤的界面状态 */
+/* 场景深链：#scene=xxx，用于调试与截图，可稳定复现界面状态 */
 const SCENES = {
   home:      {},                                              // 初始地图
   hex:       { geom: 'hex' },                                 // 六边形网格
